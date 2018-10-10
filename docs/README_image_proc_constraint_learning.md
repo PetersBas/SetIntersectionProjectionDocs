@@ -1,4 +1,4 @@
-#Image processing by learning a parametric intersection of (non-)convex sets
+# Learning a parametrized intersection from a few training examples
 
 [Julia script for this example a) (joint image denoising+deblurring+inpainting)](../examples/Ecuador_deblurring_inpainting/deblurring_inpainting_by_constraint_learning_SA.jl)
 
@@ -6,130 +6,71 @@
 
 The applications of interest for this example are linear inverse problems, such as removing motion blur with a known blurring kernel and inpainting of missing pixels, single-image super-resolution, denoising, and desaturation of saturated images. We use aerial photos as the target. We can solve these various image processing tasks with the following simple strategy:
 
-1. Observe (learn) the parameters of various constraint sets in various transform-domains by looking at just a few representative training images.
-2. Add a constraint set for data-fit 
-2. Project a noisy/saturated/blurred/masked image onto the intersection of the learned (model properties) sets and data-fit set.
-3. The projection of the corrupted image should now have similar properties as good training images.
+1. Observe the constraint parameters of various constraints in various transform-domains for all training examples (independently in parallel for each example and each constraint).
+2. Add a data-fit constraint to the intersection.
+3. The solution of the inverse problem is the projection of an initial guess ``m`` onto the learned intersection of sets 
+	```math #proj_intersect_lininvprob2
+	\min_{x,\{y_i\}} \frac{1}{2}\| x - m \|_2^2 + \sum_{i=1}^{p-1} 	\iota_{\mathcal{C}_i}(y_i) + \iota_{\mathcal{C}_p^\text{data}}(y_p)\quad \text{s.t.} 	\quad \begin{cases}
+	A_i x = y_i \\ Fx=y_p
+	\end{cases},
+	```
+	where ``F`` is a linear forward modeling operator and we solve this problem with
 
-We formulate the projection problem as
-```math #proj_intersect_lininvprob2
-\min_{\bx,\by_i} \frac{1}{2}\| \bx - \bm \|_2^2 + \sum_{i=1}^{p-1} \iota_{\mathcal{C}_i}(\by_i) + \iota_{\mathcal{C}_p^\text{data}}(\by_p)\quad \text{s.t.} \quad \begin{cases}
-A_i \bx = \by_i \\ B\bx=\by_p
-\end{cases}
-```
-and solve it with the PARSDMM algortihm. This is a linear inverse problem with forward/observation operator, ``B \in \mathbb{R}^{M \times N}``, model estimation ``\bx \in \mathbb{R}^N`` and the observed data ``\bd_\text{obs} \in \mathbb{R}^M``. The solution is the projection of the initial guess ``\bm`` onto the intersection of constraint sets that describe the model ``\bx`` and a data constraint set ``\mathcal{C}_p^{\text{data}}``. Examples of data-fit constraints are ``\{ \bx \: | \: \bl \leq (B \bx - \bd_\text{obs}) \leq \bu\}`` and ``\{ \bx \: | \: \| B \bx - \bd_\text{obs} \|_2 \leq \sigma \}``. 
-
-For both examples we observe the following constraint parameters:
+For both of the examples we observe the following constraint parameters from exemplar images:
  
-1. upper and lower bounds: ``\{ \bm \: | \: \bl_i \leq \bm_i \leq \bu_i \}``
-2. nuclear norm: ``\{ \bm \: | \:  \sum_{j=1}^k \lambda_j  \leq \sigma \}``, with ``\bm = \textbf{vec}( \sum_{j=1}^{k}\lambda_j \bu_j \bv_j^* )`` is the SVD of the image
-3. nuclear norm of discrete gradients of the image (total-nuclear-variation): ``\{ \bm \: | \:  \sum_{j=1}^k \lambda_j  \leq \sigma \}``, with ``(I_{n_x} \otimes D_z)\bm = \textbf{vec}( \sum_{j=1}^{k}\lambda_j \bu_j \bv_j^* )`` is the SVD of the vertical derivative of the image, same for the other direction
-4. anisotropic total-variation: ``\{ \bm \: | \: \| A \bm \|_1 \leq \sigma \}`` with ``A = ((I_{n_x} \otimes D_z)^T \: (D_x \otimes I_{n_z})^T)^T``
-5. annulus: ``\{ \bm \: | \: \sigma_l \leq \| \bm \|_2 \leq \sigma_u \}``
-6. annulus of the discrete gradients of the training images:  ``\{ \bm \: | \: \sigma_l \leq \| A \bm \|_2 \leq \sigma_u \}`` with ``A = ((I_{n_x} \otimes D_z)^T \: (D_x \otimes I_{n_z})^T)^T``
-7. ``\ell_1``-norm of DFT coefficients: ``\{ \bm \: | \: \| A \bm \|_1 \leq \sigma \}`` with ``A = `` discrete Fourier transform
-8. slope-constraints in x and z direction (bounds on the discrete gradients of the image): ``\{ \bm \: | \: \bl_i \leq (D_x \otimes I_{n_z}) \bm)_i \leq \bu_i \}`` with all ``\bu_i = \varepsilon_u`` and ``\bl_i = - \varepsilon_l``, same for z-direction
-9. point-wise bound-constraints on DCT coefficients: ``\{ \bm \: | \: \bl_i \leq (A \bm)_i \leq \bu_i \}``, with ``A=`` discrete cosine transform
+1. ``\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}`` (upper and lower bounds)
+2. ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma_3 \}`` with ``m = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )`` is the SVD of the image (nuclear norm)
+3. ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma_4 \}``, with ``(I_x \otimes D_z)m = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )`` is the SVD of the vertical derivative of the image (nuclear norm of discrete gradients of the image, total-nuclear-variation). Use the same for the x-direction.
+4. ``\{ m \: | \: \| A m \|_1 \leq \sigma_5 \}`` with ``A = ((I_x \otimes D_z)^\top \: (D_x \otimes I_z)^\top)^\top`` (anisotropic total-variation) 
+5. ``\{ m \: | \: \sigma_6 \leq \| m \|_2 \leq \sigma_7 \}`` (annulus)
+6.  ``\{ m \: | \: \sigma_8 \leq \| A m \|_2 \leq \sigma_9 \}`` with ``A = ((I_x \otimes D_z)^\top \: (D_x \otimes I_z)^\top)^\top`` (annulus of the discrete gradients of the training images)
+7. ``\{ m \: | \: \| A m \|_1 \leq \sigma_{10} \}`` with ``A = `` discrete Fourier transform (``\ell_1``-norm of DFT coefficients) 
+8. ``\{ m \: | \: - \sigma_{11} \leq ((D_x \otimes I_z) m)[i] \leq \sigma_{12} \}`` (slope-constraints in x and z direction, bounds on the discrete gradients of the image)
+9. ``\{ m \: | \: l[i] \leq (A m)[i] \leq u[i] \}``, with ``A=`` discrete cosine transform (point-wise bound-constraints on DCT coefficients) 
 
-We also add a point-wise data-fit constraint, ``\{ \bx \: | \: \bl \leq (B \bx - \bd_\text{obs}) \leq \bu\}``.
+
+These are nine types of convex and non-convex constraints on the model properties (``11`` sets passed to PARSDMM because sets three and eight are applied to the two dimensions separately). For data-fitting, we add a point-wise constraint, ``\{ x \: | \: l \leq (F x - d_\text{obs}) \leq u \}`` with a linear forward model ``F \in \mathbb{R}^{M \times N}``.
 
 ## Example 1: joint denoising-deblurring-inpainting
-The goal of the first example is to recover an image from ``20\%`` observed pixels of a blurred image (25 pixels known motion blur), where each observed data-point also contains a small amount of random noise in the interval ``[-2 - 2]``. The dataset is a series of images from 'Planet Labs PlanetScope Ecuador' with a resolution of three meters, available at openaerialmap.org. There are ``35`` patches (``1100 \times 1100`` pixels) for training and Figure #Fig:inpainting-deblurring-evaluation shows the results. 
-
-We compare our results with the solution of ``\min \|\bx\|_\text{TV} \:\: \text{s.t.} \:\: \|B \bx - \bd_\text{obs} \|_2 \leq \sigma`` (TV-BPDN), computed with the Matlab package TFOCS. We used TFOCS with a very small (TFOCS parameter ``\mu=1e-5``) additional smoothing and ran the iterations until the solution signal to noise ratio (SNR) did not further improve. Additionally, we compare the results when we recover the wavelet coefficients, ``\mathbf{c}``, by solving ``\min \| \mathbf{c} \|_1 \:\: \text{s.t.} \:\: \|B W^* \mathbf{c} - \bd_\text{obs} \|_2 \leq \sigma`` (TV-wavelet) with the SPGL1 toolbox for Matlab. The matrix ``W`` represents the wavelet transform. The learned set intersection approach achieves higher SNR for all evaluation images than the basis-pursuit denoise formulation tested with total-variation and with Wavelets (Daubechies wavelets as implemented by the SPOT linear operator toolbox (http://www.cs.ubc.ca/labs/scl/spot/index.html) and computed with the Rice Wavelet Toolbox (RWT, github.com/ricedsp/rwt)).
+The goal of the first example is to recover a ``[0 - 255]`` grayscale image from ``20\%`` observed pixels of a blurred image (``25`` pixels known motion blur), where each observed data point also contains zero-mean random noise in the interval ``[-10 - 10]``. The forward operator ``F`` is thus a subsampled banded matrix (restriction of an averaging matrix). As an additional challenge, we do not assume exact knowledge of the noise level and work with the over-estimation ``[-15 - 15]``. The data set contains a series of images from 'Planet Labs PlanetScope Ecuador' with a resolution of three meters, available at openaerialmap.org. There are ``35`` patches of ``1100 \times 1100`` pixels for training, some of which are displayed in Figure #Fig:inpainting-deblurring-training\.
 
 
-### Figure:  inpainting {#Fig:inpainting-deblurring-training .wide}
-![](images/inpainting_deblurring_figs/training_data_1.png)
-![](images/inpainting_deblurring_figs/training_data_2.png)
-![](images/inpainting_deblurring_figs/training_data_3.png)
-![](images/inpainting_deblurring_figs/training_data_4.png)\
-![](images/inpainting_deblurring_figs/training_data_5.png)
-![](images/inpainting_deblurring_figs/training_data_6.png)
-![](images/inpainting_deblurring_figs/training_data_7.png)
-![](images/inpainting_deblurring_figs/training_data_8.png)
+### Figure:  inpainting {#Fig:inpainting-deblurring-training}
+![](images/inpainting_deblurring_figs/training_data_first8.png){width=100%}
 : A sample of ``8`` out of ``35`` training images.
 
+We compare the results of the proposed PARSDMM algorithm with the ``11`` learned constraints, with a basis pursuit denoise (BPDN) formulation. Basis-pursuit denoise recovers a vector of wavelet coefficients, ``c``, by solving ``\min_c \| c \|_1 \:\: \text{s.t.} \:\: \|F W^* c - d_\text{obs} \|_2 \leq \sigma`` (BPDN-wavelet) with the SPGL1 toolbox. The matrix ``W`` represents the wavelet transform: Daubechies Wavelets as implemented by the SPOT linear operator toolbox (http://www.cs.ubc.ca/labs/scl/spot/index.html) and computed with the Rice Wavelet Toolbox (RWT, github.com/ricedsp/rwt). 
+
+In Figure #Fig:inpainting-deblurring-evaluation we see that an overestimation of ``\sigma`` in the BPDN formulation results in oversimplified images, because the ``\ell_2``-ball constraint is too large which leads to a coefficient vector ``c`` that has an ``\ell_1``-norm that is smaller than the ``\ell_1``-norm of the true image. The values for ``l`` and ``u`` in the data-fit constraint ``\{ x \: | \: l \leq (F x - d_\text{obs}) \leq u \}``, are also too large. However, the results from the projection onto the intersection of multiple constraints suffer much less from overestimated noise levels, because there are many other constraints that control the model properties. The results in Figure #Fig:inpainting-deblurring-evaluation show that the learned set-intersection approach achieves a higher PSNR for all evaluation images compared to the BPDN formulation. 
+
 ### Figure:  inpainting {#Fig:inpainting-deblurring-evaluation .wide}
-![](images/inpainting_deblurring_figs/deblurring_inpainting_observed1.png)
-![](images/inpainting_deblurring_figs/deblurring_inpainting_observed2.png)
-![](images/inpainting_deblurring_figs/deblurring_inpainting_observed3.png)
-![](images/inpainting_deblurring_figs/deblurring_inpainting_observed4.png)\
-![](images/inpainting_deblurring_figs/deblurring_inpainting_evaluation1.png)
-![](images/inpainting_deblurring_figs/deblurring_inpainting_evaluation2.png)
-![](images/inpainting_deblurring_figs/deblurring_inpainting_evaluation3.png)
-![](images/inpainting_deblurring_figs/deblurring_inpainting_evaluation4.png)\
-![](images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting1.png)
-![](images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting2.png)
-![](images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting3.png)
-![](images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting4.png)\
-![](images/inpainting_deblurring_figs/TFOCS_TV_inpainting1.png)
-![](images/inpainting_deblurring_figs/TFOCS_TV_inpainting2.png)
-![](images/inpainting_deblurring_figs/TFOCS_TV_inpainting3.png)
-![](images/inpainting_deblurring_figs/TFOCS_TV_inpainting4.png)\
-![](images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting1.png)
-![](images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting2.png)
-![](images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting3.png)
-![](images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting4.png)
-: Reconstruction results from 80% missing pixels of an image with motion blur (25 pixels) and noise for PARSDMM with many learned constraints, BPDN-total-variation with TFOCS and BPDN-wavelet with SPGL1.
+![](images/inpainting_deblurring_figs/deblurring_inpainting_results.png){width=100%}
+: Reconstruction results from 80% missing pixels of an image with motion blur (25 pixels) and zero-mean random noise in the interval ``[-10, 10]``. Results that are the projection onto an intersection of ``12`` learned constraints sets with PARSDMM are visually better than BPDN-wavelet results.
 
 ## Example 2: Image desaturation
-We will now apply exactly the same strategy and algorithm to a different inverse problem. We only need to re-observe the constraint set parameters from a new set of training images (Figure #Fig:deblurring-training) and change our forward operator ``B``.
-The second data set contains image patches from the 'Desa Sangaji Kota Ternate' image with a resolution of ``11`` centimeters and size of ``1500 \times 1250`` pixels, available at openaerialmap.org. (https://map.openaerialmap.org/#/-44.12109374999999,0,2/latest/5a17b890bac48e5b1c2f3b75?_k=4ag2c0). The observed images are saturated grayscale and generated by clipping the pixel values from ``0 - 60`` to ``60`` and from ``125 - 255`` to ``125``. There is saturation on both the dark and bright pixels, but much stronger saturation on the high-intensity pixels than on the low-intensity ones. If we have no other information about the pixels at the clipped value, the desaturation problem implies the point-wise bound constraints
+To illustrate the versatility of the learning strategy, algorithm, and constraint sets from the previous example, we now solve an image desaturation problem for a different data set. The only two things that we change are the constraint set parameters, which we observe from new training images (Figure #Fig:desaturation-training), and a different linear forward operator ``F``. The data set contains image patches (``1500 \times 1250`` pixels) from the 'Desa Sangaji Kota Ternate' image with a resolution of ``11`` centimeters, available at openaerialmap.org. The corrupted observed images are saturated grayscale and generated by clipping the pixel values from ``0 - 60`` to ``60`` and from ``125 - 255`` to ``125``, so there is saturation on both the dark and bright pixels. If we have no other information about the pixels at the clipped value, the desaturation problem implies the point-wise bound constraints
 
 ```math #saturation_constraint
 \begin{cases}
-0 \leq \bx_i \leq 60 & \text{if } \bd^{\text{obs}}_i =60\\
-\bx_i = \bd^{\text{obs}}_i & \text{if } 60 \leq \bd^{\text{obs}}_i \leq 125\\
-125 \leq \bx_i \leq 255 & \text{if } \bd^{\text{obs}}_i = 125\\
+0 \leq x[i] \leq 60 & \text{if } d^{\text{obs}}[i] =60\\
+x[i] = d^{\text{obs}}[i] & \text{if } 60 \leq d^{\text{obs}}[i] \leq 125\\
+125 \leq x[i] \leq 255 & \text{if } d^{\text{obs}}[i] = 125\\
 \end{cases}.
 ```
-The forward operator is thus the identity matrix, ``B=I_N``. Other approaches also use this constraint for desaturation. We compare our results to a basis-pursuit denoise formulation that solves ``\min_\bx \|A \bx\|_1 \:\: \text{s.t} \:\: \bl_i \leq \bx_i \leq \bu_i``, where ``i`` indexes the elements of the vectors and the bound constraints are as described above by Equation (#saturation_constraint). The transform-domain matrix is the anisotropic total-variation operator. That work who also incorporates pre-processing and windowing techniques in the desaturation workflow for color images. We do not use any pre-processing and work with the full image. 
+The forward operator is thus the identity matrix. We solve problem (#proj_intersect_lininvprob2) with these point-wise data-fit constraints and the model-property constraints listed in the previous example.
 
-### Figure:  desaturation {#Fig:deblurring-training .wide}
-![](images/desaturation_Ternate/training_data_1.png)
-![](images/desaturation_Ternate/training_data_2.png)
-![](images/desaturation_Ternate/training_data_3.png)
-![](images/desaturation_Ternate/training_data_4.png)\
-![](images/desaturation_Ternate/training_data_5.png)
-![](images/desaturation_Ternate/training_data_6.png)
-![](images/desaturation_Ternate/training_data_7.png)
-![](images/desaturation_Ternate/training_data_8.png)
+
+### Figure:  desaturation {#Fig:desaturation-training .wide}
+![](images/desaturation_Ternate/training_data_first8.png){width=100%}
 : A sample of ``8`` out of ``16`` training images.
 
-Figure #Fig:desaturation-evaluation shows the results, true and observed data for four evaluation images. PARSDMM with learned parameters for preset constraints achieves a similar or slightly better SNR than minimization of the total-variation subject to a data-fit constraint. Both methods have problems with large saturated patches because there are no non-saturated observed pixels that serve as 'anchor' points. A difference between the BPDN and the projection onto intersection approach is how each method estimates large saturated patches. The TV-BPDN approach minimizes the total-variation, which means that the difference between the estimated pixel values of the saturated patches and the surrounding pixels needs to be as small as possible. The surrounding pixels are all ``\leq 125``, so the estimated pixel values of large saturated patches are therefore also not exceeding ``125``. The projection onto intersection approach does have this problem, because one of the constraints requires a sufficiently small total-variation that is based on a few representative training examples, instead of minimizing the total-variation. As we can see in Figure (#Fig:desaturation-evaluation), the results from PARSDMM seem to recover better the intensity of large saturated patches (and sometimes overestimate) and have a better visual contrast than the BPDN results. Although the SNR does not clearly reveal this, the histograms of estimated pixel values show this effect. The projection onto a set intersection results are just one sample out of the feasible set. Different initial guesses may result in different projected points. We could compute multiple projections to obtain a sense of the estimation uncertainty.
+Figure #Fig:desaturation-evaluation shows the results, true and observed data for four evaluation images. Large saturated patches are not desaturated accurately everywhere, because they contain no non-saturated observed pixels that serve as 'anchor' points.
 
-### Figure:  desaturation_results {#Fig:desaturation-evaluation}
-![](images/desaturation_Ternate/desaturation_evaluation1.png)
-![](images/desaturation_Ternate/desaturation_evaluation2.png)
-![](images/desaturation_Ternate/desaturation_evaluation3.png)
-![](images/desaturation_Ternate/desaturation_evaluation4.png)\
-![](images/desaturation_Ternate/saturized_observed1.png)
-![](images/desaturation_Ternate/saturized_observed2.png)
-![](images/desaturation_Ternate/saturized_observed3.png)
-![](images/desaturation_Ternate/saturized_observed4.png)\
-![](images/desaturation_Ternate/PARSDMM_desaturation1.png)
-![](images/desaturation_Ternate/PARSDMM_desaturation2.png)
-![](images/desaturation_Ternate/PARSDMM_desaturation3.png)
-![](images/desaturation_Ternate/PARSDMM_desaturation4.png)\
-![](images/desaturation_Ternate/TV_BPDN_desaturation1.png)
-![](images/desaturation_Ternate/TV_BPDN_desaturation2.png)
-![](images/desaturation_Ternate/TV_BPDN_desaturation3.png)
-![](images/desaturation_Ternate/TV_BPDN_desaturation4.png)
-: Reconstruction results from recovery from saturated images of PARSDMM with ``10`` constraints and BPDN-total-variation.
+### Figure:  desaturation_results {#Fig:desaturation-evaluation .wide}
+![](images/desaturation_Ternate/desaturation_results.png){width=100%}
+: Reconstruction results from recovery from saturated images as the projection onto the intersection of ``12`` constraint sets.
 
-### Figure:  desaturation_results {#Fig:desaturation-histograms .wide}
-![](Figures/desaturation_Ternate/hist_desaturation_PARSDMM1){width=25%}
-![](Figures/desaturation_Ternate/hist_desaturation_PARSDMM2){width=25%}
-![](Figures/desaturation_Ternate/hist_desaturation_PARSDMM3){width=25%}
-![](Figures/desaturation_Ternate/hist_desaturation_PARSDMM4){width=25%}\
-![](Figures/desaturation_Ternate/hist_desaturation_TVBPDN1){width=25%}
-![](Figures/desaturation_Ternate/hist_desaturation_TVBPDN2){width=25%}
-![](Figures/desaturation_Ternate/hist_desaturation_TVBPDN3){width=25%}
-![](Figures/desaturation_Ternate/hist_desaturation_TVBPDN4){width=25%}
-: Histograms of reconstruction results from recovery from saturated images of PARSDMM with ``10`` constraints and BPDN-total-variation. The opaque (blue) histogram is the true image, the semi-transparant (brown) histogram corresponds to the recovered image.
-
-Both examples show that PARSDMM with convex and non-convex sets converges to the desired feasibility tolerance and the results are similar or better than the basis-pursuit denoise formulation while the simple learning approach requires a few training examples only. It may be possible to improve the results from projection onto the set intersection by identifying the least similar training examples after the first reconstruction (e.g., removing images with clouds if it is clear that the reconstructed image has no clouds). The learned constraint parameters should then more accurately describe the image and may lead to improved reconstruction.
+Both the desaturation and the joint deblurring-denoising-inpainting example show that PARSDMM with multiple convex and non-convex sets converges to good results, while only a few training examples were sufficient to estimate the constraint set parameters. Because of the problem formulation, algorithms, and simple learning strategy, there were no parameters to hand-pick.
 
 
 
