@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="generator" content="scholpandoc">
+  <meta name="viewport" content="width=device-width">
+  
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.js"></script>
+  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+</head>
+<body>
+<div class="scholmd-container">
+<div class="scholmd-main">
+<div class="scholmd-content">
+<h1 id="frequency-domain-full-waveform-inversion-fwi-with-constraints">Frequency domain Full-Waveform Inversion (FWI) with constraints</h1>
+<p><a href="../examples/constrained_freq_FWI_simple.jl">Julia script for this example</a></p>
+<p>Seismic full-waveform inversion (FWI) estimates rock properties (acoustic velocity in this example) from seismic signals (pressure) measured by hydrophones. FWI is a partial-differential-equation (PDE) constrained optimization problem where after eliminating the PDE constraint, the simulated data, <span class="math scholmd-math-inline">\(d_\text{predicted}(m) \in \mathbb{C}^M\)</span>, are connected nonlinearly to the unknown model parameters, <span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>. We assume that we know the source and receiver locations, as well as the source function. A classic example of an objective for FWI is the nonlinear least-squares misfit <span class="math scholmd-math-inline">\(f(m)=1/2 \| d_\text{obs} - d_\text{predicted}(m) \|_2^2\)</span>, which we use for this numerical experiment.</p>
+<p>FWI is a problem hampered by local minima. Empirical evidence suggests that we can mitigate issues with parasitic local minima by insisting that all model iterates be elements of the intersection of multiple constraint sets. This means that we add regularization to the objective <span class="math scholmd-math-inline">\(f(m) : \mathbb{R}^N \rightarrow \mathbb{R}\)</span> in the form of multiple constraints—i.e., we have 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation}
+\min_{m} f(m) \quad \text{s.t.} \quad m \in \mathcal{V} = \bigcap_{i=1}^p \mathcal{V}_i.
+\label{FWI_prob}
+\end{equation}
+\]</span>
+ While many choices exist to solve this constrained optimization problem, we use the spectral projected gradient (SPG) algorithm with a non-monotone line search to solve the above problem. SPG uses information from the current and previous gradient of <span class="math scholmd-math-inline">\(f(m)\)</span> to approximate the action of the Hessian of <span class="math scholmd-math-inline">\(f(m^k)\)</span> with the scalar <span class="math scholmd-math-inline">\(\alpha\)</span>: the Barzilai-Borwein step length. At iteration <span class="math scholmd-math-inline">\(k\)</span>, SPG updates the model iterate as follows: 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation}
+m^{k+1} = (1-\gamma) m^k - \gamma \mathcal{P}_{\mathcal{V}} (m^k - \alpha \nabla_{m}f(m^k)),
+\label{SPG_iter}
+\end{equation}
+\]</span>
+ where the non-monotone line search determines <span class="math scholmd-math-inline">\(\gamma \in (0,1]\)</span>.</p>
+<p>The prior knowledge consists of: <em>(a)</em> minimum and maximum velocities (<span class="math scholmd-math-inline">\(2350 - 2650\)</span> m/s); <em>(b)</em> The anomaly is, but we do not know the size, aspect ratio, or location. The following constraint sets follow from the prior information:</p>
+<ol type="1">
+<li><span class="math scholmd-math-inline">\(\{ x \: | \: \operatorname{card}( (D_z \otimes I_x) x ) \leq n_x \}\)</span></li>
+<li><span class="math scholmd-math-inline">\(\{ x \: | \: \operatorname{card}( (I_z \otimes D_x) x ) \leq n_z \}\)</span></li>
+<li><span class="math scholmd-math-inline">\(\{ x \: | \: \operatorname{rank}(x) \leq 3 \}\)</span></li>
+<li><span class="math scholmd-math-inline">\(\{ x \: | \: 2350 \leq x[i] \leq 2650 \: \forall i\}\)</span></li>
+<li><span class="math scholmd-math-inline">\(\{ x \: | \: \operatorname{card}( D_x X[i,:] ) \leq 2 \:\: \text{for} \:\: i \in \{1,2,\dots,n_z\} \}\)</span>, <span class="math scholmd-math-inline">\(X[i,:]\)</span> is a row of the 2D model</li>
+<li><span class="math scholmd-math-inline">\(\{ x \: | \: \operatorname{card}( D_z X[:,j] ) \leq 2 \:\: \text{for} \:\: j \in \{1,2,\dots,n_x\}\}\)</span>, <span class="math scholmd-math-inline">\(X[:,j]\)</span> is a column of the 2D model</li>
+</ol>
+<p>We use slightly overestimated rank and matrix cardinality constraints compared to the true model to mimic the more realistic situation that not all prior knowledge was correct. The results in Figure <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span> use single-level PARSDMM to compute projections onto the intersection of constraints, and show that an intersection of non-convex constraints and bounds can lead to improved model estimates. Figure <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span>(e) is the result of working with constraints <span class="math scholmd-math-inline">\([1,2,4]\)</span>, Figure <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span>(f) uses constraints <span class="math scholmd-math-inline">\([1,2,4,5,6]\)</span>, and Figure <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span>(g) uses all constraints <span class="math scholmd-math-inline">\([1,2,3,4,5,6]\)</span>. The result with rank constraints and both matrix and row/column-based cardinality constraints on the discrete gradient of the model is the most accurate in terms of the recovered anomaly shape. All results in Figure <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span> that work with non-convex sets are at least as accurate as the result obtained with the true TV in terms of anomaly shape. Another important observation is that all non-convex results estimate a lower-than-background velocity anomaly, although not as low as the true anomaly. Contrary, the models obtained using convex sets show incorrect higher-than-background velocity artifacts in the vicinity of the true anomaly location.</p>
+<p>Figure <span class="scholmd-crossref"><a href="#Fig:FWI-2">2</a></span> is the same as Figure <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span>, except that we use multilevel PARSDMM with three levels and a coarsening of a factor two per level. The multilevel version of PARSDMM performs better in general. In Figures <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span>(e) and <span class="scholmd-crossref"><a href="#Fig:FWI">1</a></span>(f), we see that the result of single-level PARSDMM inside SPG does not exactly satisfy constraint set numbers <span class="math scholmd-math-inline">\(5\)</span> and <span class="math scholmd-math-inline">\(6\)</span>, because the cardinality of the derivative of the model in <span class="math scholmd-math-inline">\(x\)</span> and <span class="math scholmd-math-inline">\(z\)</span> directions is not always less than or equal to two for each row and column. The results from multilevel PARSDMM inside SPG, Figure <span class="scholmd-crossref"><a href="#Fig:FWI-2">2</a></span>(a) and <span class="scholmd-crossref"><a href="#Fig:FWI-2">2</a></span>(b), satisfy the constraints on the cardinality of the derivative of the image per row and column. As a result, the models are closer to the rectangular shape of the true model. This is only one example with a few different constraint combinations so we cannot draw general conclusions about the performance of single versus multilevel schemes, but the empirical findings are encouraging.</p>
+<figure class="scholmd-float scholmd-figure scholmd-widefloat" id="Fig:FWI">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/CFWI_simple_freq_m_est_true.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/CFWI_simple_freq_m_est_initial.png" />
+</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/CFWI_simple_freq_m_est_bounds_only.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/CFWI_simple_freq_m_est_trueTV_bounds.png" />
+</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/CFWI_simple_freq_m_est_cardmat_bounds.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/CFWI_simple_freq_m_est_cardmat_cardcol_bounds.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/CFWI_simple_freq_m_est_cardmat_cardcol_rank_bounds.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">True, initial, and estimated models with various constraint combinations for the full-waveform inversion example. Crosses and circles represent sources and receivers, respectively. All projections inside the spectral projected gradient algorithm are computed using single-level PARSDMM.</span></figcaption></div>
+</figure>
+<figure class="scholmd-float scholmd-figure scholmd-widefloat" id="Fig:FWI-2">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/ML3_CFWI_simple_freq_m_est_cardmat_bounds.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/ML3_CFWI_simple_freq_m_est_cardmat_cardcol_bounds.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: 33%">
+<img src="images/FWI_figs/ML3_CFWI_simple_freq_m_est_cardmat_cardcol_rank_bounds.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Estimated models with various constraint combinations for the full-waveform inversion example. Crosses and circles represent sources and receivers, respectively. All projections inside the spectral projected gradient algorithm are computed using coarse-to-fine multilevel PARSDMM with three levels and a coarsening of a factor two per level.</span></figcaption></div>
+</figure>
+<div class="references">
+
+</div>
+</div>
+</div>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+      processClass: "math"
+    },
+    TeX: {
+        TagSide: "left",
+        TagIndent: "1.2em",
+        equationNumbers: {
+            autoNumber: "AMS"
+        },
+        Macros: {
+            ensuremath: ["#1",1],
+            textsf: ["\\mathsf{\\text{#1}}",1],
+            texttt: ["\\mathtt{\\text{#1}}",1]
+        }
+    },
+    "HTML-CSS": { 
+        scale: 100,
+        availableFonts: ["TeX"], 
+        preferredFont: "TeX",
+        webFont: "TeX",
+        imageFont: "TeX",
+        EqnChunk: 1000
+    }
+});
+</script>
+<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+</div>
+</body>
+</html>

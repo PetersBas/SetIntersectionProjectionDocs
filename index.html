@@ -9,10 +9,29 @@
   <meta name="generator" content="scholpandoc">
   <meta name="viewport" content="width=device-width">
   
-  <title></title>
+  <title>Set Intersection Projection</title>
   <style type="text/css">code{white-space: pre;}</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.js"></script>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
   <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
 </head>
 <body>
@@ -21,111 +40,288 @@
 <div class="math scholmd-math-definitions" style="visibility: hidden; height: 0px; width 0px;">\[
 \def\bb{\mathbf b}
 \def\bc{\mathbf c}
-\def\bd{\mathbf d}
+\defd{\mathbf d}
 \def\bg{\mathbf g}
 \def\bh{\mathbf h}
 \def\bl{\mathbf l}
-\def\bm{\mathbf m}
+\defm{\mathbf m}
 \def\bp{\mathbf p}
 \def\bq{\mathbf q}
 \def\br{\mathbf r}
 \def\bs{\mathbf s}
 \def\bu{\mathbf u}
-\def\bv{\mathbf v}
+\defv{\mathbf v}
 \def\bw{\mathbf w}
-\def\by{\mathbf y}
-\def\bx{\mathbf x}
+\defy{\mathbf y}
+\defx{\mathbf x}
 \def\bz{\mathbf z}
 %\def\argmin{\operatornamewithlimits{arg min}}
 \def\argmin{\mathop{\rm arg\min}}
 \]</div>
 <div class="scholmd-content">
-<h1 id="image-processing-by-learning-a-parametric-intersection-of-non-convex-sets">Image processing by learning a parametric intersection of (non-)convex sets</h1>
-<p><a href="../examples/examples/Ecuador_deblurring_inpainting/deblurring_inpainting_by_constraint_learning_SA.jl">Julia script for this example a) (joint image denoising+deblurring+inpainting)</a></p>
-<p><a href="../examples/examples/Indonesia_deblurring/image_desaturation_by_constraint_learning.jl">Julia script for this example b) (image desaturation)</a></p>
-<p>The applications of interest for this example are linear inverse problems, such as removing motion blur with a known blurring kernel and inpainting of missing pixels, single-image super-resolution, denoising, and desaturation of saturated images. We use aerial photos as the target.</p>
-<p>Several recent works on linear imaging inverse problems <span class="scholmd-citation" data-cites="Chang_2017_ICCV">(e.g., @7949028, <span class="citeproc-not-found" data-reference-id="Chang_2017_ICCV"><strong>???</strong></span>)</span> use neural networks that require large datasets containing hundreds to hundreds of thousands of training examples. On the other hand, there are methods that do not require training, such as basis-pursuit type formulations <span class="scholmd-citation" data-cites="MRM:MRM21391">(e.g., <span class="citeproc-not-found" data-reference-id="MRM:MRM21391"><strong>???</strong></span>, <span class="scholmd-citation" data-cites="Candes2009">(<span class="citeproc-not-found" data-reference-id="Candes2009"><strong>???</strong></span>)</span>, <span class="scholmd-citation" data-cites="doi:10.1137/080714488">(<span class="citeproc-not-found" data-reference-id="doi:10.1137/080714488"><strong>???</strong></span>)</span>, <span class="scholmd-citation" data-cites="Becker2011">(<span class="citeproc-not-found" data-reference-id="Becker2011"><strong>???</strong></span>)</span>, <span class="scholmd-citation" data-cites="doi:10.1137/130919210">(<span class="citeproc-not-found" data-reference-id="doi:10.1137/130919210"><strong>???</strong></span>)</span>)</span> often minimize the <span class="math scholmd-math-inline">\(\ell_1\)</span>-norm of transform-domain coefficients (total-variation, Wavelet) or the nuclear norm of an image, subject to a data-fit constraint. Without learning, the method requires hand picking a suitable transform for each class of images.</p>
-<p>Here we use a very simple method to learn the constraint parameters, such as bounds, <span class="math scholmd-math-inline">\(\ell_1\)</span>, <span class="math scholmd-math-inline">\(\ell_2\)</span> and nuclear norms for various transform-domains. The learning is just observing the parameters of training examples. The advantage is that we obtain competitive or better results than basis-pursuit problem formulations with only a few representative training examples. The training phase is computationally cheap and intrinsically parallel per training image and per learned constraint parameter. There is no need to adapt transforms and constraints to different classes of images because we will use a variety of constraints and transform-domain operators. The philosophy here is that if we use a variety of constraints, there is likely at least one ‘good’ constraint that discriminates between blurred and focussed images or images with missing pixels and realistic images. The disadvantage is that the learned constraint parameters will not generalize well to other types of images. We will learn parameters for up to <span class="math scholmd-math-inline">\(15\)</span> different constraint types for a joint denoising-inpainting-deblurring example. We then use the same constraints but re-learn the parameters for a different type of images for a desaturation problem. The algorithm is thus identical for different problems and different datasets. Regarding the geometry of the inverse problem, we learn a convex or non-convex set that contains the class of images we seek to reconstruct. We parameterize the set we want to learn as an intersection of many sets in combination with many transform-domain operators.</p>
-<p>Once the set is learned, we add a data-fit constraint to the intersection and reconstruction follows as the projection of an initial guess onto the learned set. If we would seek a feasible point instead of a projection, this problem formulation is known as ‘set-theoretic estimation’ <span class="scholmd-citation" data-cites="COMBETTES1996155">(@214546, <span class="citeproc-not-found" data-reference-id="COMBETTES1996155"><strong>???</strong></span>)</span>. The authors of @1323102 observe that for <span class="math scholmd-math-inline">\(15\)</span> out of <span class="math scholmd-math-inline">\(20\)</span> investigated data-sets, <span class="math scholmd-math-inline">\(99\%\)</span> of the images have a total-variation within <span class="math scholmd-math-inline">\(20\%\)</span> of the average total variation of the data-set. Here we follow the same reasoning, but use many constraints and the PARSDMM algorithm to compute the projection. The forward model <span class="math scholmd-math-inline">\(B\)</span> is a banded matrix for a blurring kernel on a regular grid, a diagonal restriction of the identity matrix for inpainting and the product of the two for simultaneous inpainting and deblurring. Just as the other transform-domain operators, the banded forward models are efficiently stored in the compressed diagonal storage format. The sparsity-pattern of <span class="math scholmd-math-inline">\(B^T B\)</span> completely or partially overlaps with that of the constraints listed below, so matrix-vector products do not require additional computational time.</p>
-<p>For both examples we observe the following constraint parameters:</p>
-<ol type="1">
-<li>upper and lower bounds: <span class="math scholmd-math-inline">\(\{ \bm \: | \: \bl_i \leq \bm_i \leq \bu_i \}\)</span></li>
-<li>nuclear norm: <span class="math scholmd-math-inline">\(\{ \bm \: | \: \sum_{j=1}^k \lambda_j \leq \sigma \}\)</span>, with <span class="math scholmd-math-inline">\(\bm = \textbf{vec}( \sum_{j=1}^{k}\lambda_j \bu_j \bv_j^* )\)</span> is the SVD of the image</li>
-<li>nuclear norm of discrete gradients of the image (total-nuclear-variation): <span class="math scholmd-math-inline">\(\{ \bm \: | \: \sum_{j=1}^k \lambda_j \leq \sigma \}\)</span>, with <span class="math scholmd-math-inline">\((I_{n_x} \otimes D_z)\bm = \textbf{vec}( \sum_{j=1}^{k}\lambda_j \bu_j \bv_j^* )\)</span> is the SVD of the vertical derivative of the image, same for the other direction</li>
-<li>anisotropic total-variation: <span class="math scholmd-math-inline">\(\{ \bm \: | \: \| A \bm \|_1 \leq \sigma \}\)</span> with <span class="math scholmd-math-inline">\(A = ((I_{n_x} \otimes D_z)^T \: (D_x \otimes I_{n_z})^T)^T\)</span></li>
-<li>annulus: <span class="math scholmd-math-inline">\(\{ \bm \: | \: \sigma_l \leq \| \bm \|_2 \leq \sigma_u \}\)</span></li>
-<li>annulus of the discrete gradients of the training images: <span class="math scholmd-math-inline">\(\{ \bm \: | \: \sigma_l \leq \| A \bm \|_2 \leq \sigma_u \}\)</span> with <span class="math scholmd-math-inline">\(A = ((I_{n_x} \otimes D_z)^T \: (D_x \otimes I_{n_z})^T)^T\)</span></li>
-<li><span class="math scholmd-math-inline">\(\ell_1\)</span>-norm of DFT coefficients: <span class="math scholmd-math-inline">\(\{ \bm \: | \: \| A \bm \|_1 \leq \sigma \}\)</span> with <span class="math scholmd-math-inline">\(A = \)</span> discrete Fourier transform</li>
-<li>slope-constraints in x and z direction (bounds on the discrete gradients of the image): <span class="math scholmd-math-inline">\(\{ \bm \: | \: \bl_i \leq (D_x \otimes I_{n_z}) \bm)_i \leq \bu_i \}\)</span> with all <span class="math scholmd-math-inline">\(\bu_i = \varepsilon_u\)</span> and <span class="math scholmd-math-inline">\(\bl_i = - \varepsilon_l\)</span>, same for z-direction</li>
-<li>point-wise bound-constraints on DCT coefficients: <span class="math scholmd-math-inline">\(\{ \bm \: | \: \bl_i \leq (A \bm)_i \leq \bu_i \}\)</span>, with <span class="math scholmd-math-inline">\(A=\)</span> discrete cosine transform</li>
-</ol>
-<p>There are nine types of constraints on the model (<span class="math scholmd-math-inline">\(11\)</span> sets passed to PARSDMM). We also add a point-wise data-fit constraint, <span class="math scholmd-math-inline">\(\{ \bx \: | \: \bl \leq (B \bx - \bd_\text{obs}) \leq \bu\}\)</span>, and compute the projection onto the intersection of all constraints with PARSDMM (algorithm #alg:PARSDMM) applied to problem formulation #proj_intersect_lininvprob2.</p>
-<p>The goal of the first example is to recover an image from <span class="math scholmd-math-inline">\(20%\)</span> observed pixels of a blurred image (25 pixels known motion blur), where each observed data-point also contains a small amount of random noise in the interval <span class="math scholmd-math-inline">\([-2 - 2]\)</span>. The dataset is a series of images from ‘Planet Labs PlanetScope Ecuador’ with a resolution of three meters, available at openaerialmap.org. There are <span class="math scholmd-math-inline">\(35\)</span> patches (<span class="math scholmd-math-inline">\(1100 \times 1100\)</span> pixels) for training and Figure <span class="scholmd-crossref"><a href="#Fig:inpainting-deblurring-evaluation">2</a></span> shows the results. We compare our results with the solution of <span class="math scholmd-math-inline">\(\min \|\bx\|_\text{TV} \:\: \text{s.t.} \:\: \|B \bx - \bd_\text{obs} \|_2 \leq \sigma\)</span> (TV-BPDN), computed with the Matlab package TFOCS <span class="scholmd-citation" data-cites="Becker2011">(<span class="citeproc-not-found" data-reference-id="Becker2011"><strong>???</strong></span>)</span>. We used TFOCS with a very small (TFOCS parameter <span class="math scholmd-math-inline">\(\mu=1e-5\)</span>) additional smoothing and ran the iterations until the solution signal to noise ratio (SNR) did not further improve. Additionally, we compare the results when we recover the wavelet coefficients, <span class="math scholmd-math-inline">\(\mathbf{c}\)</span>, by solving <span class="math scholmd-math-inline">\(\min \| \mathbf{c} \|_1 \:\: \text{s.t.} \:\: \|B W^* \mathbf{c} - \bd_\text{obs} \|_2 \leq \sigma\)</span> (TV-wavelet) with the SPGL1 toolbox <span class="scholmd-citation" data-cites="doi:10.1137/080714488">(<span class="citeproc-not-found" data-reference-id="doi:10.1137/080714488"><strong>???</strong></span>)</span> for Matlab. The matrix <span class="math scholmd-math-inline">\(W\)</span> represents the wavelet transform. The learned set intersection approach achieves higher SNR for all evaluation images than the basis-pursuit denoise formulation tested with total-variation and with Wavelets (Daubechies wavelets as implemented by the SPOT linear operator toolbox (http://www.cs.ubc.ca/labs/scl/spot/index.html) and computed with the Rice Wavelet Toolbox (RWT, github.com/ricedsp/rwt)).</p>
-<figure class="scholmd-float scholmd-figure scholmd-widefloat" id="Fig:inpainting-deblurring-training">
-<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_1.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_2.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_3.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_4.png" />
-</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_5.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_6.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_7.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/inpainting_deblurring_figs/training_data_8.png" />
+<header>
+<h1 class="scholmd-title">Set Intersection Projection</h1>
+<div class="scholmd-author">
+<p>Bas Peters<sup>*</sup>, Felix J. Herrmann<sup>#</sup><br /><sup>*</sup>University of British Columbia.<br /><sup>#</sup>Georgia Institute of Technology</p>
+</div>
+</header>
+<figure class="scholmd-float scholmd-figure" id="fig:geom_ex">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: 50%">
+<img src="docs/images/geometrical_ex.png" />
 </figure></div>
-<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">A sample of <span class="math scholmd-math-inline">\(8\)</span> out of <span class="math scholmd-math-inline">\(35\)</span> training images.</span></figcaption></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">Projections (yellow) of two different points (red) onto a non-convex intersection (black area). The black area is the intersection of a sheared annulus (blue), box constraints (red), and two halfspaces (purple). Blue, red and purple lines indicate the boundary of the sets.</span></figcaption></div>
 </figure>
-<figure class="scholmd-float scholmd-figure scholmd-widefloat" id="Fig:inpainting-deblurring-evaluation">
-<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_observed1.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_observed2.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_observed3.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_observed4.png" />
-</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_evaluation1.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_evaluation2.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_evaluation3.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/deblurring_inpainting_evaluation4.png" />
-</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting1.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting2.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting3.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/PARSDMM_deblurring_inpainting4.png" />
-</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/TFOCS_TV_inpainting1.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/TFOCS_TV_inpainting2.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/TFOCS_TV_inpainting3.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/TFOCS_TV_inpainting4.png" />
-</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting1.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting2.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting3.png" />
-</figure><figure class="scholmd-subfig" style="display: inline-block; width: 25%">
-<img src="images/inpainting_deblurring_figs/SPGL1_wavelet_inpainting4.png" />
+<p><strong>SetIntersectionProjection</strong> is a <strong>Julia</strong> 0.6 package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (<span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>) onto intersections of <span class="math scholmd-math-inline">\(p\)</span> convex and non-convex sets: 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation*}
+\mathcal{P}_{\mathcal{V}} (m) \in \arg\min_{x} \frac{1}{2} \| x - m \|_2^2 \quad \text{subject to} \quad x \in\bigcap_{i=1}^p \mathcal{V}_i.
+\end{equation*}
+\]</span>
+ Our main algorithm, <strong>Projection Adaptive Relaxed Simultaneous Direction Method of Multipliers (PARSDMM)</strong>, recasts the projection problem as 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation*}
+\min_{x} \frac{1}{2} \| x - m \|_2^2 + \sum_{i=1}^{p} \iota_{\mathcal{C}_i}(A_i x).
+\end{equation*}
+\]</span>
+ Each set <span class="math scholmd-math-inline">\(\mathcal{V_i}\)</span> is characterized as an ‘elementary’ set <span class="math scholmd-math-inline">\(\mathcal{C_i}\)</span>, for which we know a closed-form projection (<span class="math scholmd-math-inline">\(\ell_1\)</span>-ball, <span class="math scholmd-math-inline">\(\ell_2\)</span>-ball, bounds, nuclear norm, rank, cardinality, annulus, …) and a linear operator <span class="math scholmd-math-inline">\(A_i\)</span> (discrete derivatives, DFT, DCT, Curvelet transform, anisotropic total-variation,…). For example, if we have <span class="math scholmd-math-inline">\(\mathcal{V} = \{ x \: | \: \| Ax \|_1 \leq \sigma \}\)</span>, then we use a linear operator <span class="math scholmd-math-inline">\(A\)</span> and set <span class="math scholmd-math-inline">\(\mathcal{C} = \{ y \: | \: \| y \|_1 \leq \sigma \}\)</span> with additional equality constraints <span class="math scholmd-math-inline">\(Ax=y\)</span>.</p>
+<p>The inputs for the algorithm are pairs of projector onto <span class="math scholmd-math-inline">\(\mathcal{C}_i\)</span> and linear operator <span class="math scholmd-math-inline">\(A_i\)</span>.</p>
+<p><strong>SetIntersectionProjection</strong> is designed</p>
+<ul>
+<li>for applications in imaging inverse problems</li>
+<li>as the projector onto an intersection of constraint sets to solve <span class="math scholmd-math-inline">\(\min_{m} f(m) \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i\)</span> with a spectral projected gradient / projected quasi-Newton / projected-Newton method.</li>
+<li>as a solver for linear inverse problem with forward operator <span class="math scholmd-math-inline">\(F \in \mathbb{R}^{M \times N}\)</span>, data constraints such as <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \bl[j] \leq (Fx - d_\text{observed})[j] \leq \bu[j] \}\)</span>, <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}\)</span> where index <span class="math scholmd-math-inline">\([j]\)</span> indicates a vector entry, and model property constraints formulated as 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation*}
+\min_{x,y_i} \frac{1}{2}\| x - m \|_2^2 + \sum_{i=1}^{p} \iota_{\mathcal{C}_i}(y_i) + \iota_{\mathcal{C}_{p+1}^\text{data}}(y_{p+1})\quad \text{s.t.} \quad \begin{cases}
+A_i x = y_i \\ Fx=y_{p+1}
+\end{cases}.
+\end{equation*}
+\]</span>
+</li>
+</ul>
+<h2 id="computational-features">Computational features</h2>
+<ul>
+<li>parametric typing for Float32 and Float64 support</li>
+<li>designed for model sizes from <span class="math scholmd-math-inline">\(\approx 50^2\)</span> to at least <span class="math scholmd-math-inline">\(400^3\)</span></li>
+<li>includes scripts to set up projectors and linear operators For 2D and 3D models</li>
+<li>constraints may be defined for the matrix/tensor model and for columns/slices/fibers simultaneously</li>
+<li>works in serial or parallel with <span class="math scholmd-math-inline">\(1\)</span> Julia worker per constraint</li>
+<li>some constraints also use Julia Threads to compute sub-problems in parallel on each worker</li>
+<li>serial part of code also uses multithreading and mulithreaded BLAS &amp; FFTW operations</li>
+<li>a build-in multilevel continuations drastically reduces computational times for many problems</li>
+<li>a build-in multilevel continuations empirically lead to better results for non-convex sets</li>
+<li>linear operators may be: SparseMatrixCSC, JOLI <a href="https://github.com/slimgroup/JOLI.jl" class="uri">https://github.com/slimgroup/JOLI.jl</a> DCT/DFT/Curvelet matrix-free operators</li>
+<li>stores <code>AtA[i]=</code> <span class="math scholmd-math-inline">\(A_i^\top A_i\)</span> in compressed diagonal storage (CDS or DIA format) if all <span class="math scholmd-math-inline">\(A_i\)</span> have a banded structure. This saves memory compared to standard Julia <code>SparseMatrixCSC</code> format. We also use a multithreaded matrix-vector product which is faster than the Julia <code>SparseMatrixCSC</code> matrix-vector product</li>
+</ul>
+<h2 id="constraints-linear-operators">Constraints &amp; linear operators</h2>
+<figure class="scholmd-float scholmd-table-float" id="set-overview">
+<div class="scholmd-float-content"><table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">descriptions</th>
+<th style="text-align: left;">set</th>
+<th style="text-align: left;">code</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">bounds</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: l[i] \leq m[i] \leq u[i] \}\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_bounds&quot;]</code>, <code>constraint[&quot;m_min&quot;]=l</code>, <code>constraint[&quot;m_max&quot;]=u</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">transform-domain bounds</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: l[i] \leq (A m)[i] \leq b[i] \}\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_bounds_1&quot;]=true</code>, <code>constraint[&quot;TD_LB_1&quot;]=l</code>, <code>constraint[&quot;TD_UB_1&quot;]=u</code> <code>constraint[&quot;TDB_operator_1&quot;]=A</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">(special case) vertical (approximate) monotonicity</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: l[i] \leq (I_x \otimes D_z) m)[i] \leq u[i] \}\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_bounds_1&quot;]=true</code>, <code>constraint[&quot;TD_LB_1&quot;]=-eps</code>, <code>constraint[&quot;TD_UB_1&quot;]=+eps</code>, <code>constraint[&quot;TDB_operator_1&quot;]=D_z</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">transform-domain <span class="math scholmd-math-inline">\(\ell_1\)</span></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \| A m \|_1 \leq \sigma \}\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_l1_1&quot;]=true</code>, <code>constraint[&quot;TD_l1_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_l1_sigma_1&quot;] = sigma</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">transform-domain <span class="math scholmd-math-inline">\(\ell_2\)</span></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \| A m \|_2 \leq \sigma \}\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_l2_1&quot;]=true</code>, <code>constraint[&quot;TD_l2_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_l2_sigma_1&quot;] = sigma</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">transform-domain annulus</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_l \leq \| A m \|_2 \leq \sigma_u \}\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_annulus_1&quot;]=true</code>, <code>constraint[&quot;TD_annulus_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_annulus_sigma_min_1&quot;] = sigma_l</code>, <code>constraint[&quot;TD_annulus_sigma_max_1&quot;] = sigma_u</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">transform-domain cardinality</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \textbf{card}(Am) \leq k \}\)</span>, <span class="math scholmd-math-inline">\(k\)</span> is a positive integer</td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_card_1&quot;]=true</code>, <code>constraint[&quot;TD_card_operator_1``]=A</code>, <code>constraint[&quot;card_1&quot;]</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">transform-domain nuclear norm</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma \}\)</span>, with <span class="math scholmd-math-inline">\(Am = \textbf{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )\)</span> is the SVD</td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_nuclear_1_&quot;]=true</code>, <code>constraint[&quot;TD_nuclear_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_nuclear_norm_1&quot;]  = sigma</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">transform-domain rank constraint</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: Am = \textbf{vec}( \sum_{j=1}^{r}\lambda[j] u_j v_j^*) \}\)</span>, <span class="math scholmd-math-inline">\(r &lt; \text{min}(n_z,n_x)\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_TD_rank_1&quot;]=true</code>, <code>constraint[&quot;TD_rank_operator_1&quot;]=A</code>, <code>constraint[&quot;max_TD_rank_1&quot;]=r</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">subspace constraints</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | m = A c, \:\: c \in \mathbb{C}^M \}\)</span></td>
+<td style="text-align: left;"><code>constraint[&quot;use_subspace&quot;]=true</code>, <code>constraint[&quot;A&quot;]=A</code>, <code>constraint[&quot;subspace_orthogonal&quot;]=true</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Table</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">Overview of constraint sets that the software currently supports. A new constraint set may be added by providing a projection onto the set (without linear operator) and a sparse linear operator or equivalent matrix-vector product together with its adjoint. Vector entries are indexed as <span class="math scholmd-math-inline">\(m[i]\)</span>.</span></figcaption></div>
+</figure>
+<figure class="scholmd-float scholmd-table-float" id="LOP-overview">
+<div class="scholmd-float-content"><table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">descriptions</th>
+<th style="text-align: left;">Linear operator</th>
+<th style="text-align: left;">code</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">discrete derivative in one direction</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(I_x \otimes D_z\)</span> , <span class="math scholmd-math-inline">\(D_x \otimes I_z\)</span></td>
+<td style="text-align: left;">“D_z”, “D_x”</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">discrete derivative in all directions</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\begin{pmatrix} I_x \otimes D_z \\ D_x \otimes I_z \end{pmatrix}\)</span></td>
+<td style="text-align: left;">“D2D” or “D3D”</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">identity matrix</td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(I\)</span></td>
+<td style="text-align: left;">“identity”</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">discrete cosine transform</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">“DCT”</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">discrete Fourier transform</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">“DFT”</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">curvelet transform</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">“curvelet”</td>
+</tr>
+</tbody>
+</table></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Table</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types <code>SparseMatrixCSC</code> or <code>JOLI</code> operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case.</span></figcaption></div>
+</figure>
+<h2 id="applications">Applications</h2>
+<ul>
+<li><a href="docs/README_freq_FWI_ex.md">Seismic full-waveform inversion with SetIntersectionProjection as the projector for spectral projected gradient</a></li>
+<li><a href="docs/README_image_proc_constraint_learning.md">Learning a parametric intersection of (non-)convex sets for to joint image denoising-deblurring-inpainting or image desaturation</a></li>
+</ul>
+<h2 id="examples-of-parallel-and-multilevel-functionality">Examples of parallel and multilevel functionality</h2>
+<ul>
+<li><a href="examples/projection_intersection_2D.jl">Project a 2D image onto an intersection of sets with parallel and multilevel PARSDMM</a></li>
+<li><a href="examples/projection_intersection_3D.jl">Project a 3D image onto an intersection of sets with parallel and multilevel PARSDMM</a></li>
+</ul>
+<h2 id="performance">Performance</h2>
+<ul>
+<li><a href="docs/README_PARSDMM_performance.md">timings for projections of 2D and 3D models vs grid size and computational cost of parallel Dykstra vs PARSDMM</a></li>
+<li><a href="docs/MVPs.md">timings Julia 0.6 SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec</a></li>
+</ul>
+<h2 id="a-first-example">A first example</h2>
+<p>The following example illustrates the basic usage. We will project an image onto a set that is the intersection of bound constraint, vertical monotonicity (slope-constraints) and horizontal smoothness (another type of slope-constraint). This is a serial (single-level) example. Use parallel and or multi-level version for larger problems.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">using SetIntersectionProjection
+using MAT
+using PyPlot
+
+<span class="kw">type</span> compgrid
+  d :: <span class="dt">Tuple</span>
+  n :: <span class="dt">Tuple</span>
+<span class="kw">end</span>
+
+<span class="co">#PARSDMM options:</span>
+options    = PARSDMM_options()
+options.FL = <span class="dt">Float32</span>
+
+<span class="co">#select working precision</span>
+<span class="kw">if</span> options.FL==<span class="dt">Float64</span>
+  TF = <span class="dt">Float64</span>
+  TI = <span class="dt">Int64</span>
+<span class="kw">elseif</span> options.FL==<span class="dt">Float32</span>
+  TF = <span class="dt">Float32</span>
+  TI = <span class="dt">Int32</span>
+<span class="kw">end</span>
+
+<span class="co">#load image to project</span>
+file = matopen(<span class="st">&quot;compass_velocity.mat&quot;</span>)
+m    = read(file, <span class="st">&quot;Data&quot;</span>); close(file)
+m = m[<span class="fl">1</span>:<span class="fl">341</span>,<span class="fl">200</span>:<span class="fl">600</span>]
+m = m&#39;
+
+<span class="co">#set up computational grid (25 and 6 m are the original distances between grid points)</span>
+comp_grid = compgrid((TF(<span class="fl">25.0</span>), TF(<span class="fl">6.0</span>)),(size(m,<span class="fl">1</span>), size(m,<span class="fl">2</span>)))
+m         = convert(<span class="dt">Vector</span>{TF},vec(m))</code></pre>
+<p>Now we are ready to decide what constraints we want to use. We select bounds constraints (bounds may be scalar or vector valued) as well as bound constraints on the vertical (z-direction) discrete derivative of the image. This also known as a slope constraint and we use it to achieve monotonicity of the pixel values from top to bottom.</p>
+<p>We provide scripts to generate projectors and linear operators, but you can build your own as well.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#constraints</span>
+constraint=<span class="dt">Dict</span>() <span class="co">#initialize dictionary</span>
+
+constraint[<span class="st">&quot;use_bounds&quot;</span>] = true
+constraint[<span class="st">&quot;m_min&quot;</span>]      = <span class="fl">1500.0</span>
+constraint[<span class="st">&quot;m_max&quot;</span>]      = <span class="fl">4500.0</span>
+
+constraint[<span class="st">&quot;use_TD_bounds_1&quot;</span>] = true
+constraint[<span class="st">&quot;TDB_operator_1&quot;</span>]  = <span class="st">&quot;D_z&quot;</span>
+constraint[<span class="st">&quot;TD_LB_1&quot;</span>]         = <span class="fl">0.0</span>
+constraint[<span class="st">&quot;TD_UB_1&quot;</span>]         = <span class="fl">1e6</span>
+
+options.parallel       = false
+(P_sub,TD_OP,set_Prop) = setup_constraints(constraint,comp_grid,options.FL)</code></pre>
+<p>Once we have projectors and transform-domain operators, we use <code>PARSDMM_precompute_distribute</code> to precompute and distribute things, followed by actually projecting <code>m</code> and plotting the results.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">(TD_OP,AtA,l,y)        = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options)
+(x,log_PARSDMM)        = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options)</code></pre>
+<p>Plot the results.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#define axis limits and colorbar limits for plotting</span>
+xmax = comp_grid.d[<span class="fl">1</span>]*comp_grid.n[<span class="fl">1</span>]
+zmax = comp_grid.d[<span class="fl">2</span>]*comp_grid.n[<span class="fl">2</span>]
+vmi  = <span class="fl">1500.0</span>
+vma  = <span class="fl">4500.0</span>
+
+figure();imshow(reshape(m,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;model to project&quot;</span>)
+figure();imshow(reshape(x,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;Projection (bounds and bounds on D_z)&quot;</span>)
+
+<span class="co">#plot PARSDMM logs</span>
+figure();
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">3</span>);semilogy(log_PARSDMM.r_pri)          ;title(<span class="st">&quot;r primal&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">4</span>);semilogy(log_PARSDMM.r_dual)         ;title(<span class="st">&quot;r dual&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">1</span>);semilogy(log_PARSDMM.obj)            ;title(L<span class="st">&quot;$ </span>\f<span class="st">rac{1}{2} || m-x ||_2^2 $&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">2</span>);semilogy(log_PARSDMM.set_feasibility);title(<span class="st">&quot;TD feasibility violation&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">5</span>);plot(log_PARSDMM.cg_it)              ;title(<span class="st">&quot;nr. of CG iterations&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">6</span>);semilogy(log_PARSDMM.cg_relres)      ;title(<span class="st">&quot;CG rel. res.&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">7</span>);semilogy(log_PARSDMM.rho)            ;title(<span class="st">&quot;rho&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">8</span>);plot(log_PARSDMM.gamma)              ;title(<span class="st">&quot;gamma&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">9</span>);semilogy(log_PARSDMM.evol_x)         ;title(<span class="st">&quot;x evolution&quot;</span>)
+tight_layout()</code></pre>
+<figure class="scholmd-float scholmd-figure" id="fig:intro-ex">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: 50%">
+<img src="docs/images/original_model.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: 50%">
+<img src="docs/images/projected_model.png" />
+</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 50%">
+<img src="docs/images/PARSDMM_logs.png" />
 </figure></div>
-<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Reconstruction results from 80% missing pixels of an image with motion blur (25 pixels) and noise for PARSDMM with many learned constraints, BPDN-total-variation with TFOCS and BPDN-wavelet with SPGL1.</span></figcaption></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">A model, its projection onto the intersection of bound constraints and vertical monotonicity (as a pointwise slope constraint), as well as various diagnostics from the PARSDMM algorithm.</span></figcaption></div>
 </figure>
-<p></p>
+<p>.</p>
 <div class="references">
 
 </div>

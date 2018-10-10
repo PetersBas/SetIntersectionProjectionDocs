@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="generator" content="scholpandoc">
+  <meta name="viewport" content="width=device-width">
+  
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.js"></script>
+  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+</head>
+<body>
+<div class="scholmd-container">
+<div class="scholmd-main">
+<div class="math scholmd-math-definitions" style="visibility: hidden; height: 0px; width 0px;">\[
+\def\bb{\mathbf b}
+\def\bc{\mathbf c}
+\def\bd{\mathbf d}
+\def\bg{\mathbf g}
+\def\bh{\mathbf h}
+\def\bl{\mathbf l}
+\def\bm{\mathbf m}
+\def\bp{\mathbf p}
+\def\bq{\mathbf q}
+\def\br{\mathbf r}
+\def\bs{\mathbf s}
+\def\bu{\mathbf u}
+\def\bv{\mathbf v}
+\def\bw{\mathbf w}
+\def\by{\mathbf y}
+\def\bx{\mathbf x}
+\def\bz{\mathbf z}
+%\def\argmin{\operatornamewithlimits{arg min}}
+\def\argmin{\mathop{\rm arg\min}}
+\]</div>
+<div class="scholmd-content">
+<h1 id="performance-of-projection-adaptive-relaxed-simultaneous-method-of-multipliers-parsdmm">Performance of Projection Adaptive Relaxed Simultaneous Method of Multipliers (PARSDMM)</h1>
+<p>To see how the proposed PARSDMM algorithm compares to parallel Dykstra’s algorithm, we need to set up a fair experimental setting that includes the sub-problem solver in parallel Dykstra’s algorithm. Fortunately, if we use Adaptive Relaxed ADMM (ARADMM) for the projection sub-problems of parallel Dykstra’s algorithm, both PARSDMM and Parallel Dykstra-ARADMM have the same computational components. ARADMM also uses the same update scheme for the augmented Lagrangian penalty and relaxation parameters as we use in PARSDMM. This similarity allows for a comparison of the convergence as a function of the basic computational components. We manually tuned ARADMM stopping conditions to achieve the best performance for parallel Dykstra’s algorithm overall.</p>
+<p>The numerical experiment is the projection of a 2D geological model (<span class="math scholmd-math-inline">\(341 \times 400\)</span> pixels) onto the intersection of three constraint sets that are of interest to seismic imaging:</p>
+<ol type="1">
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}\)</span> : bound constraints</li>
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: \| A m \|_1 \leq \sigma \}\)</span> with <span class="math scholmd-math-inline">\(A = [(I_x \otimes D_z)^\top \:\: (D_x \otimes I_z)^\top]^\top\)</span> : anisotropic total-variation constraints</li>
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: 0 \leq ((I_x \otimes D_z) m)[i] \leq \infty \}\)</span> : vertical monotonicity constraints</li>
+</ol>
+<p>For these sets, the primary computational components are <em>(i)</em> matrix-vector products in the conjugate-gradient algorithm. The system matrix has the same sparsity pattern as <span class="math scholmd-math-inline">\(A^\top A\)</span>, because the sparsity patterns of the linear operators in set number one and three overlap with the pattern of <span class="math scholmd-math-inline">\(A^\top A\)</span>. Parallel Dykstra uses matrix-vector products with <span class="math scholmd-math-inline">\(A^\top A\)</span>, <span class="math scholmd-math-inline">\((D_x \otimes I_z)^\top (D_x \otimes I_z)\)</span>, and <span class="math scholmd-math-inline">\(I\)</span> in parallel. <em>(ii)</em> projections onto the box constraint set and the <span class="math scholmd-math-inline">\(\ell_1\)</span>-ball. Both parallel Dykstra’s algorithm and PARSDMM compute these in parallel. <em>(iii)</em> parallel communication that sends a vector from one to all parallel processes, and one map-reduce parallel sum that gathers the sum of vectors on all workers. The communication is the same for PARSDMM and parallel Dykstra’s algorithm so we ignore it in the experiments below.</p>
+<p>Before we discuss the numerical results, we discuss some details on how we count the computational operations mentioned above:</p>
+<ul>
+<li><p>Matrix-vector products in CG: At each PARSDMM iteration, we solve a single linear system with the conjugate-gradient method. Parallel Dykstra’s algorithm simultaneously computes three projections by running three instances of ARADMM in parallel. The projections onto sets two and three solve a linear system at every ARADMM iteration. For each parallel Dykstra iteration, we count the total number of sequential CG iterations, which is determined by the maximum number of CG iterations for either set number two or three.</p></li>
+<li><p><span class="math scholmd-math-inline">\(\ell_1\)</span>-ball projections: PARSDMM projects onto the <span class="math scholmd-math-inline">\(\ell_1\)</span> ball once per iteration. Parallel Dykstra projects (number of parallel Dykstra iterations) <span class="math scholmd-math-inline">\(\times\)</span> (number of ARADMM iterations for set number two) times onto the <span class="math scholmd-math-inline">\(\ell_1\)</span> ball. Because <span class="math scholmd-math-inline">\(\ell_1\)</span>-ball projections are computationally more intensive compared to projections onto the box (element-wise comparison) and also less suitable for multi-threaded parallelization, we focus on the <span class="math scholmd-math-inline">\(\ell_1\)</span>-ball projections.</p></li>
+</ul>
+<p>We use the following stopping criteria: 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation}
+r^\text{evol} &lt; \varepsilon^\text{evol} \quad \text{and} \quad r^{\text{feas}}_i &lt; \varepsilon^{\text{feas}}_i \quad \forall \: i.
+\label{stopping_conditions}
+\end{equation}
+\]</span>
+ with 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation}
+r^{\text{feas}}_i = \frac{ \| A_i x - \mathcal{P}_{\mathcal{C}_i}(A_i x) \| }{ \| A_i x \| }, \, i=1\cdots p,
+\label{feas_stop}
+\end{equation}
+\]</span>
+ and 
+<span class="math scholmd-math-display" style="display: block;">\[
+\begin{equation}
+r^\text{evol} = \frac{ \text{max}_{j \in S} \{ \|x^k - x^{k-j}\| \} }{ \|x^k\| },
+\label{obj_stop}
+\end{equation}
+\]</span>
+ where <span class="math scholmd-math-inline">\(S \equiv \{ 1,2,\dots,5 \}\)</span>. During our numerical experiments, we select <span class="math scholmd-math-inline">\(\varepsilon^\text{evol}=10^{-2}\)</span> and <span class="math scholmd-math-inline">\(\varepsilon^{\text{feas}}_i = 10^{-3}\)</span>, which balance sufficiently accurate solutions and short solution times.</p>
+<p>The results in Figure <span class="scholmd-crossref"><a href="#Fig:Dyk-vs-PARSDMM">1</a></span> show that PARSDMM requires much fewer CG iterations and <span class="math scholmd-math-inline">\(\ell_1\)</span>-ball projections to achieve the same relative set feasibility error in the transform-domain as defined in equation <span class="scholmd-crossref"><span class="math scholmd-math-inline">\(\eqref{feas_stop}\)</span></span>. Different from the curves corresponding to parallel Dykstra’s algorithm, we see that PARSDMM converges somewhat oscillatory, which is caused by changing the relaxation and augmented-Lagrangian penalty parameters.</p>
+<figure class="scholmd-float scholmd-figure scholmd-widefloat" id="Fig:Dyk-vs-PARSDMM">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/Dykstra_vs_PARSDMM_feasibility_CG.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images//Dykstra_vs_PARSDMM_feasibility.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images//Dykstra_vs_PARSDMM_x_evol.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">Relative transform-domain set feasibility (equation <span class="scholmd-crossref"><span class="math scholmd-math-inline">\(\ref{feas_stop}\)</span></span>) as a function of the number of conjugate-gradient iterations and projections onto the <span class="math scholmd-math-inline">\(\ell_1\)</span> ball. This figure also shows relative change per iteration in the solution <span class="math scholmd-math-inline">\(x\)</span>.</span></figcaption></div>
+</figure>
+<p>Because non-convex sets are an important application for us, we compare the performance for a non-convex intersection as well:</p>
+<ol type="1">
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}\)</span>: bound constraints</li>
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: (I_x \otimes D_z) m = \operatorname{vec}( \sum_{j=1}^{r}\lambda[j] u_j v_j^* )\}\)</span>, where <span class="math scholmd-math-inline">\(r &lt; \text{min}(n_z,n_x)\)</span>, <span class="math scholmd-math-inline">\(\lambda[j]\)</span> are the singular values, and <span class="math scholmd-math-inline">\(u_j\)</span>, <span class="math scholmd-math-inline">\(v_j\)</span> are singular vectors: rank constraints on the vertical gradient of the image</li>
+</ol>
+<p>We count the computational operations in the same way as in the previous example, but this time the computationally most costly projection is the projection onto the set of matrices with limited rank via the singular value decomposition. The results in Figure <span class="scholmd-crossref"><a href="#Fig:Dyk-vs-PARSDMM2">2</a></span> show that the convergence of parallel Dykstra’s algorithm almost stalls: the solution estimate gets closer to satisfying the bound constraints, but there is hardly any progress towards the rank constraint set. PARSDMM does not seem to suffer from non-convexity in this particular example.</p>
+<figure class="scholmd-float scholmd-figure scholmd-widefloat" id="Fig:Dyk-vs-PARSDMM2">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/Dykstra_vs_PARSDMM_feasibility_CG2.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images//Dykstra_vs_PARSDMM_feasibility2.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images//Dykstra_vs_PARSDMM_x_evol2.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Relative transform-domain set feasibility (equation <span class="scholmd-crossref"><span class="math scholmd-math-inline">\(\ref{feas_stop}\)</span></span>) as a function of the number of conjugate-gradient iterations and projections onto the set of matrices with limited rank via the SVD. This figure also shows relative change per iteration in the solution <span class="math scholmd-math-inline">\(x\)</span>.</span></figcaption></div>
+</figure>
+<p>We used the single-level version of PARSDMM such that we can compare the computational cost with Parallel Dykstra. The PARSDMM results in this section are therefore pessimistic in general, as the multilevel version can offer additional speedups, which we show next.</p>
+<h3 id="some-timings-for-2d-and-3d-projections">Some timings for 2D and 3D projections</h3>
+<p>We show timings for projections of geological models onto two different intersections for the four modes of operation: PARSDMM, parallel PARSDMM, multilevel PARSDMM, and multilevel parallel PARSDMM. As we mentioned, the multilevel version has a small additional overhead compared to single-level PARSDMM because of one interpolation procedure per level. Parallel PARSDMM has communication overhead compared to serial PARSDMM. However, serial PARSDMM still uses multi-threading for projections, the matrix-vector product in the conjugate-gradient method, and BLAS operations, but the <span class="math scholmd-math-inline">\(y_i\)</span> and <span class="math scholmd-math-inline">\(v_i\)</span> computations in Algorithm #alg:PARSDMM remain sequential for every <span class="math scholmd-math-inline">\(i=1,2,\cdots,p, p+1\)</span>, contrary to parallel PARSDMM. We carry our computations out on a dedicated cluster node with <span class="math scholmd-math-inline">\(2\)</span> CPUs per node with 10 cores per CPU (Intel Ivy Bridge 2.8 GHz E5-2680v2) and 128 GB of memory per node.</p>
+<p>The following sets are used to regularize a geophysical inverse problem and form the intersection for our first test case:</p>
+<ol type="1">
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}\)</span> : bound constraints</li>
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: -\sigma_3 \leq ((D_x \otimes I_z) m)[i] \leq \sigma_3 \}\)</span>: lateral smoothness constraints. There are two of these constraints in the 3D case: for the <span class="math scholmd-math-inline">\(x\)</span> and <span class="math scholmd-math-inline">\(y\)</span> direction separately.</li>
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: 0 \leq ((I_x \otimes D_z) m)[i] \leq \infty \}\)</span> : vertical monotonicity constraints</li>
+</ol>
+<p>The results in Figure <span class="scholmd-crossref"><a href="#Fig:timings-1">3</a></span> show that the multilevel strategy is much faster than the single-level version of PARSDMM. The multilevel overhead costs are thus small compared to the speedup. It also shows that, as expected, the parallel versions require some communication time, so the problems need to be large enough for the parallel version of PARSDMM to offer speedups compared to its serial counterpart.</p>
+<figure class="scholmd-float scholmd-figure" id="Fig:timings-1">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/projection_intersection_timings2D_1.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/projection_intersection_timings3D_1.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">3</span></span><span class="scholmd-caption-text">Timings for a 2D and 3D example where we project a geological model onto the intersection of bounds, lateral smoothness, and vertical monotonicity constraints.</span></figcaption></div>
+</figure>
+<p>The previous example uses four constraint sets that each use a different linear operator, but all of them are a type of bound constraint. We now show an example where one of the sets uses a much more time-consuming projection computation than the other set, which leads to the expectation that parallel PARSDMM only offers minor speedups compared to serial PARSDMM. The second constraint set onto which we project is the intersection of:</p>
+<ol type="1">
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}\)</span> : bound constraints</li>
+<li><span class="math scholmd-math-inline">\(\{ m \: | \: \|(I_x \otimes I_y \otimes D_z) m \|_1 \leq \sigma_3 \}\)</span>, with a constraint that is <span class="math scholmd-math-inline">\(50\%\)</span> of the true model: <span class="math scholmd-math-inline">\(\sigma_3 = 0.5 \|(I_x \otimes I_y \otimes D_z) m_* \|_1\)</span> : directional anisotropic total-variation</li>
+</ol>
+<p>Figures <span class="scholmd-crossref"><a href="#Fig:timings-1">3</a></span> and <span class="scholmd-crossref"><a href="#Fig:timings-2">4</a></span> show that parallel computations of the projections in PARSDMM is not always beneficial, depending on the number of constraint sets, model size, and time it takes to project onto each set.</p>
+<figure class="scholmd-float scholmd-figure" id="Fig:timings-2">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/projection_intersection_timings3D_1_b.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">4</span></span><span class="scholmd-caption-text">Timings for a 3D example where we project a geological model onto the intersection of bound constraints and an <span class="math scholmd-math-inline">\(\ell_1\)</span>-norm constraint on the vertical derivative of the image. Parallel computation of the projections does not help in this case, because the <span class="math scholmd-math-inline">\(\ell_1\)</span>-norm projection is much more time consuming than the projection onto the bound constraints. The time savings for other computations in parallel are then canceled out by the additional communication time.</span></figcaption></div>
+</figure>
+<div class="references">
+
+</div>
+</div>
+</div>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+      processClass: "math"
+    },
+    TeX: {
+        TagSide: "left",
+        TagIndent: "1.2em",
+        equationNumbers: {
+            autoNumber: "AMS"
+        },
+        Macros: {
+            ensuremath: ["#1",1],
+            textsf: ["\\mathsf{\\text{#1}}",1],
+            texttt: ["\\mathtt{\\text{#1}}",1]
+        }
+    },
+    "HTML-CSS": { 
+        scale: 100,
+        availableFonts: ["TeX"], 
+        preferredFont: "TeX",
+        webFont: "TeX",
+        imageFont: "TeX",
+        EqnChunk: 1000
+    }
+});
+</script>
+<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+</div>
+</body>
+</html>
