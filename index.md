@@ -88,8 +88,8 @@ The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and l
 
 ## Applications
 
- - [Seismic full-waveform inversion with SetIntersectionProjection as the projector for spectral projected gradient](docs/README_freq_FWI_ex.md)
- - [Learning a parametric intersection of (non-)convex sets for to joint image denoising-deblurring-inpainting or image desaturation](docs/README_image_proc_constraint_learning.md)
+ - [Seismic full-waveform inversion with SetIntersectionProjection as the projector for spectral projected gradient](docs/README_freq_FWI_ex.html)
+ - [Learning a parametric intersection of (non-)convex sets for to joint image denoising-deblurring-inpainting or image desaturation](docs/README_image_proc_constraint_learning.html)
 
 ## Examples of parallel and multilevel functionality
 
@@ -98,8 +98,8 @@ The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and l
   
 ## Performance
 
- - [timings for projections of 2D and 3D models vs grid size and computational cost of parallel Dykstra vs PARSDMM](docs/README_PARSDMM_performance.md)
- - [timings Julia 0.6 SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec](docs/MVPs.md)
+ - [timings for projections of 2D and 3D models vs grid size and computational cost of parallel Dykstra vs PARSDMM](docs/README_PARSDMM_performance.html)
+ - [timings Julia 0.6 SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec](docs/MVPs.html)
  
  
 ## A first example
