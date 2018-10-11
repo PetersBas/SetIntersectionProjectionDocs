@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="generator" content="scholpandoc">
+  <meta name="viewport" content="width=device-width">
+  
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.js"></script>
+  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+</head>
+<body>
+<div class="scholmd-container">
+<div class="scholmd-main">
+<div class="scholmd-content">
+<h1 id="sparse-matrix-vector-products">Sparse matrix-vector products</h1>
+<p>The standard native <code>Julia</code> sparse matrix (<code>SparseMatrixCSC</code>) is stored in the compressed sparse column format (CSC). Matrix-vector products with this type of matrix do not use multithreading in Julia (although there is non-Julia software that does use multiple threads and obtains small speedups).</p>
+<p>Many of our matrices <span class="math scholmd-math-inline">\(A\)</span>, get a baned structure when we form <span class="math scholmd-math-inline">\(A^\top A\)</span>. A banded structure is a matrix that has a small number of diagonals with nonzero elements. For example, if <span class="math scholmd-math-inline">\(A\)</span> is a first-order finite-difference matrix for a 2D domain, <span class="math scholmd-math-inline">\(A^\top A\)</span> also has a banded structure. We store the matrices <span class="math scholmd-math-inline">\(B = A^\top A\)</span> in the compresse diagonal storage format (CDS) (sometimes reffered to as the DIA format) if <span class="math scholmd-math-inline">\(B \in \mathbb{R}^{N \times N}\)</span> has a banded structure. This means we store all <span class="math scholmd-math-inline">\(d\)</span> nonzero diagonals as a dense matrix <span class="math scholmd-math-inline">\(R \in \mathbb{R}^{N \times d}\)</span> and a vector <span class="math scholmd-math-inline">\(n \in \mathbb{R}^d\)</span> with the indices of nonzero diagonals.</p>
+<p>Matrix-vector products in the CDS format are faster for banded matrices and also achieve a nice speedup using multiple threads. The multi-treading is implemented in pure <code>Julia</code> using only a few lines of code.</p>
+<p>Below, we compare timings for 2D and 3D models of various sizes for various number of threads on a dedicated cluster node with <span class="math scholmd-math-inline">\(2\)</span> CPUs per node, 10 cores per CPU (Intel Ivy Bridge 2.8 GHz E5-2680v2) and 128 GB memory per node. We show results for matrix-vector producs in the CSC and CDS format for a laplacian matrix. The CSC MVPs in Julia are computed as the transpose of the matrix, which is a bit faster than with the matrix itself. The matrices <span class="math scholmd-math-inline">\(B\)</span> are always symmetric so we don’t need to copmute additional transposes of matrices.</p>
+<figure class="scholmd-float scholmd-figure" id="Fig:MVSP-threads">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/MVP_timings_threads_2D_a.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/MVP_timings_threads_2D_b.png" />
+</figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/MVP_timings_threads_3D_a.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/MVP_timings_threads_3D_b.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">Times for matrix-vector products with Laplacian matrices for 2D models (top) and 3D models (bottom). Compressed column storage (CSC, native in <code>Julia</code>) and compressed diagonal storage (CDS, our implementation). Multi-threading does not pay off for too small models.</span></figcaption></div>
+</figure>
+<figure class="scholmd-float scholmd-figure" id="Fig:MVSP-grid">
+<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/MVP_timings_grid_2D.png" />
+</figure><figure class="scholmd-subfig" style="display: inline-block; width: ">
+<img src="images/MVP_timings_grid_3D.png" />
+</figure></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Times for matrix-vector products with Laplacian matrices for 2D and 3D models. Compressed column storage (CSC, native in <code>Julia</code>) and compressed diagonal storage (CDS, our implementation).</span></figcaption></div>
+</figure>
+<div class="references">
+
+</div>
+</div>
+</div>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+      processClass: "math"
+    },
+    TeX: {
+        TagSide: "left",
+        TagIndent: "1.2em",
+        equationNumbers: {
+            autoNumber: "AMS"
+        },
+        Macros: {
+            ensuremath: ["#1",1],
+            textsf: ["\\mathsf{\\text{#1}}",1],
+            texttt: ["\\mathtt{\\text{#1}}",1]
+        }
+    },
+    "HTML-CSS": { 
+        scale: 100,
+        availableFonts: ["TeX"], 
+        preferredFont: "TeX",
+        webFont: "TeX",
+        imageFont: "TeX",
+        EqnChunk: 1000
+    }
+});
+</script>
+<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+</div>
+</body>
+</html>
