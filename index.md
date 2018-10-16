@@ -9,10 +9,6 @@ classoption:
     - paper
 ---
 
-### Figure: geom-fig {#fig:geom_ex}
-![](docs/images/geometrical_ex.png){width=50%}
-: Projections (yellow) of two different points (red) onto a non-convex intersection (black area). The black area is the intersection of a sheared annulus (blue), box constraints (red), and two halfspaces (purple). Blue, red and purple lines indicate the boundary of the sets. 
-
 **SetIntersectionProjection** is a **Julia** 0.6 package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (``m \in \mathbb{R}^N``) onto intersections of ``p`` convex and non-convex sets:
 
 ```math
@@ -54,7 +50,7 @@ The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and l
 - linear operators may be: SparseMatrixCSC, JOLI [https://github.com/slimgroup/JOLI.jl](https://github.com/slimgroup/JOLI.jl) DCT/DFT/Curvelet matrix-free operators
 - stores `AtA[i]=` ``A_i^\top A_i`` in compressed diagonal storage (CDS or DIA format) if all ``A_i`` have a banded structure. This saves memory compared to standard Julia `SparseMatrixCSC` format. We also use a multithreaded matrix-vector product which is faster than the Julia `SparseMatrixCSC` matrix-vector product
 
-## Constraints & linear operators
+## List of constraints & linear operators
 
 #### Table: {#set-overview}
 |  descriptions | set | code
@@ -92,7 +88,7 @@ The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and l
  - [Learning a parametric intersection of (non-)convex sets for to joint image denoising-deblurring-inpainting or image desaturation](docs/README_image_proc_constraint_learning.html)
 
 ## Examples of parallel and multilevel functionality
-
+ - [Tutorial](docs/README_Tutorial.html)
  - [Project a 2D image onto an intersection of sets with parallel and multilevel PARSDMM](examples/projection_intersection_2D.jl)
  - [Project a 3D image onto an intersection of sets with parallel and multilevel PARSDMM](examples/projection_intersection_3D.jl)
   
@@ -104,7 +100,7 @@ The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and l
  
 ## A first example
  
-The following example illustrates the basic usage. We will project an image onto a set that is the intersection of bound constraint, vertical monotonicity (slope-constraints) and horizontal smoothness (another type of slope-constraint). This is a serial (single-level) example. Use parallel and or multi-level version for larger problems. 
+The following example illustrates the basic usage. We will project an image onto a set that is the intersection of bound constraint, vertical monotonicity (slope-constraints) and horizontal smoothness (another type of slope-constraint). This is a serial (single-level) example. Use parallel and or multi-level version for larger problems. An extended tutorial can be found [here](docs/README_Tutorial.html)
 
 ```julia
 using SetIntersectionProjection
@@ -132,8 +128,8 @@ end
 #load image to project
 file = matopen("compass_velocity.mat")
 m    = read(file, "Data"); close(file)
-m = m[1:341,200:600]
-m = m'
+m    = m[1:341,200:600]
+m    = m'
 
 #set up computational grid (25 and 6 m are the original distances between grid points)
 comp_grid = compgrid((TF(25.0), TF(6.0)),(size(m,1), size(m,2)))
@@ -164,8 +160,8 @@ options.parallel       = false
 Once we have projectors and transform-domain operators, we use `PARSDMM_precompute_distribute` to precompute and distribute things, followed by actually projecting `m` and plotting the results.
 
 ```julia
-(TD_OP,AtA,l,y)        = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options)
-(x,log_PARSDMM)  	   = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options)
+(TD_OP,AtA,l,y) = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options)
+(x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options)
 ```
 
 Plot the results.

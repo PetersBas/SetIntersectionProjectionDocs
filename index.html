@@ -65,12 +65,6 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <p>Bas Peters<sup>*</sup>, Felix J. Herrmann<sup>#</sup><br /><sup>*</sup>University of British Columbia.<br /><sup>#</sup>Georgia Institute of Technology</p>
 </div>
 </header>
-<figure class="scholmd-float scholmd-figure" id="fig:geom_ex">
-<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: 50%">
-<img src="docs/images/geometrical_ex.png" />
-</figure></div>
-<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">Projections (yellow) of two different points (red) onto a non-convex intersection (black area). The black area is the intersection of a sheared annulus (blue), box constraints (red), and two halfspaces (purple). Blue, red and purple lines indicate the boundary of the sets.</span></figcaption></div>
-</figure>
 <p><strong>SetIntersectionProjection</strong> is a <strong>Julia</strong> 0.6 package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (<span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>) onto intersections of <span class="math scholmd-math-inline">\(p\)</span> convex and non-convex sets: 
 <span class="math scholmd-math-display" style="display: block;">\[
 \begin{equation*}
@@ -113,7 +107,7 @@ A_i x = y_i \\ Fx=y_{p+1}
 <li>linear operators may be: SparseMatrixCSC, JOLI <a href="https://github.com/slimgroup/JOLI.jl" class="uri">https://github.com/slimgroup/JOLI.jl</a> DCT/DFT/Curvelet matrix-free operators</li>
 <li>stores <code>AtA[i]=</code> <span class="math scholmd-math-inline">\(A_i^\top A_i\)</span> in compressed diagonal storage (CDS or DIA format) if all <span class="math scholmd-math-inline">\(A_i\)</span> have a banded structure. This saves memory compared to standard Julia <code>SparseMatrixCSC</code> format. We also use a multithreaded matrix-vector product which is faster than the Julia <code>SparseMatrixCSC</code> matrix-vector product</li>
 </ul>
-<h2 id="constraints-linear-operators">Constraints &amp; linear operators</h2>
+<h2 id="list-of-constraints-linear-operators">List of constraints &amp; linear operators</h2>
 <figure class="scholmd-float scholmd-table-float" id="set-overview">
 <div class="scholmd-float-content"><table>
 <thead>
@@ -229,6 +223,7 @@ A_i x = y_i \\ Fx=y_{p+1}
 </ul>
 <h2 id="examples-of-parallel-and-multilevel-functionality">Examples of parallel and multilevel functionality</h2>
 <ul>
+<li><a href="docs/README_Tutorial.html">Tutorial</a></li>
 <li><a href="examples/projection_intersection_2D.jl">Project a 2D image onto an intersection of sets with parallel and multilevel PARSDMM</a></li>
 <li><a href="examples/projection_intersection_3D.jl">Project a 3D image onto an intersection of sets with parallel and multilevel PARSDMM</a></li>
 </ul>
@@ -238,7 +233,7 @@ A_i x = y_i \\ Fx=y_{p+1}
 <li><a href="docs/MVPs.html">timings Julia 0.6 SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec</a></li>
 </ul>
 <h2 id="a-first-example">A first example</h2>
-<p>The following example illustrates the basic usage. We will project an image onto a set that is the intersection of bound constraint, vertical monotonicity (slope-constraints) and horizontal smoothness (another type of slope-constraint). This is a serial (single-level) example. Use parallel and or multi-level version for larger problems.</p>
+<p>The following example illustrates the basic usage. We will project an image onto a set that is the intersection of bound constraint, vertical monotonicity (slope-constraints) and horizontal smoothness (another type of slope-constraint). This is a serial (single-level) example. Use parallel and or multi-level version for larger problems. An extended tutorial can be found <a href="docs/README_Tutorial.html">here</a></p>
 <pre class="sourceCode julia"><code class="sourceCode julia">using SetIntersectionProjection
 using MAT
 using PyPlot
@@ -264,8 +259,8 @@ options.FL = <span class="dt">Float32</span>
 <span class="co">#load image to project</span>
 file = matopen(<span class="st">&quot;compass_velocity.mat&quot;</span>)
 m    = read(file, <span class="st">&quot;Data&quot;</span>); close(file)
-m = m[<span class="fl">1</span>:<span class="fl">341</span>,<span class="fl">200</span>:<span class="fl">600</span>]
-m = m&#39;
+m    = m[<span class="fl">1</span>:<span class="fl">341</span>,<span class="fl">200</span>:<span class="fl">600</span>]
+m    = m&#39;
 
 <span class="co">#set up computational grid (25 and 6 m are the original distances between grid points)</span>
 comp_grid = compgrid((TF(<span class="fl">25.0</span>), TF(<span class="fl">6.0</span>)),(size(m,<span class="fl">1</span>), size(m,<span class="fl">2</span>)))
@@ -287,8 +282,8 @@ constraint[<span class="st">&quot;TD_UB_1&quot;</span>]         = <span class="f
 options.parallel       = false
 (P_sub,TD_OP,set_Prop) = setup_constraints(constraint,comp_grid,options.FL)</code></pre>
 <p>Once we have projectors and transform-domain operators, we use <code>PARSDMM_precompute_distribute</code> to precompute and distribute things, followed by actually projecting <code>m</code> and plotting the results.</p>
-<pre class="sourceCode julia"><code class="sourceCode julia">(TD_OP,AtA,l,y)        = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options)
-(x,log_PARSDMM)        = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options)</code></pre>
+<pre class="sourceCode julia"><code class="sourceCode julia">(TD_OP,AtA,l,y) = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options)
+(x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options)</code></pre>
 <p>Plot the results.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#define axis limits and colorbar limits for plotting</span>
 xmax = comp_grid.d[<span class="fl">1</span>]*comp_grid.n[<span class="fl">1</span>]
@@ -319,7 +314,7 @@ tight_layout()</code></pre>
 </figure><br /><figure class="scholmd-subfig" style="display: inline-block; width: 50%">
 <img src="docs/images/PARSDMM_logs.png" />
 </figure></div>
-<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">A model, its projection onto the intersection of bound constraints and vertical monotonicity (as a pointwise slope constraint), as well as various diagnostics from the PARSDMM algorithm.</span></figcaption></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">1</span></span><span class="scholmd-caption-text">A model, its projection onto the intersection of bound constraints and vertical monotonicity (as a pointwise slope constraint), as well as various diagnostics from the PARSDMM algorithm.</span></figcaption></div>
 </figure>
 <p>.</p>
 <div class="references">

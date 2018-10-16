@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="generator" content="scholpandoc">
+  <meta name="viewport" content="width=device-width">
+  
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.js"></script>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+</head>
+<body>
+<div class="scholmd-container">
+<div class="scholmd-main">
+<div class="scholmd-content">
+<h1 id="tutorial-example">Tutorial example</h1>
+<p><a href="../examples/projection_intersection_2D.jl">Julia script for this example</a></p>
+<p>We show how we can compute projections onto an intersection of multiple sets using PARSDMM, parallel PARSDMM, multilevel PARSDMM and multilevel parallel PARSDMM.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">@everywhere using SetIntersectionProjection
+using PyPlot <span class="co">#optional, for plotting only</span>
+
+<span class="kw">type</span> compgrid <span class="co">#define a computational grid information type</span>
+  d :: <span class="dt">Tuple</span>
+  n :: <span class="dt">Tuple</span>
+<span class="kw">end</span></code></pre>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#PARSDMM options:</span>
+options    = PARSDMM_options() <span class="co">#fill all options with defaults</span>
+options.FL = <span class="dt">Float32</span> 
+
+<span class="co">#other options include</span>
+  x_min_solver          :: <span class="dt">String</span>       = <span class="st">&quot;CG_normal&quot;</span> <span class="co">#what algorithm to use for the x-minimization (CG applied to normal equations)</span>
+  maxit                 :: <span class="dt">Integer</span>      = <span class="fl">200</span>         <span class="co">#max number of PARSDMM iterations</span>
+  evol_rel_tol          :: <span class="dt">Real</span>         = <span class="fl">1e-3</span>        <span class="co">#stop PARSDMM if ||x^k - X^{k-1}||_2 / || x^k || &lt; options.evol_rel_tol AND options.feas_tol is reached</span>
+  feas_tol              :: <span class="dt">Real</span>         = <span class="fl">5e-2</span>        <span class="co">#stop PARSDMM if the transform-domain relative feasibility error is &lt; options.feas_tol AND options.evol_rel_tol is reached</span>
+  obj_tol               :: <span class="dt">Real</span>         = <span class="fl">1e-3</span>        <span class="co">#optional stopping criterion for change in distance from point that we want to project</span>
+  rho_ini               :: <span class="dt">Vector</span>{<span class="dt">Real</span>} = [<span class="fl">10.0</span>]      <span class="co">#initial values for the augmented-Lagrangian penalty parameters. One value in array or one value per constraint set in array</span>
+  rho_update_frequency  :: <span class="dt">Integer</span>      = <span class="fl">2</span>           <span class="co">#update augmented-Lagrangian penalty parameters and relaxation parameters every X number of PARSDMM iterations</span>
+  gamma_ini             :: <span class="dt">Real</span>         = <span class="fl">1.0</span>         <span class="co">#initial value for all relaxation parameters (scalar)</span>
+  adjust_rho            :: <span class="dt">Bool</span>         = true        <span class="co">#adapt augmented-Lagrangian penalty parameters or not</span>
+  adjust_gamma          :: <span class="dt">Bool</span>         = true        <span class="co">#adapt relaxation parameters in PARSDMM</span>
+  adjust_feasibility_rho:: <span class="dt">Bool</span>         = true        <span class="co">#adapt augmented-Lagrangian penalty parameters based on constraint set feasibility errors (can be used in combination with options.adjust_rho)</span>
+  Blas_active           :: <span class="dt">Bool</span>         = true        <span class="co">#use direct BLAS calls, otherwise the code will use Julia loop-fusion where possible</span>
+  feasibility_only      :: <span class="dt">Bool</span>         = false       <span class="co">#drop distance term and solve a feasibility problem</span>
+  FL                    :: DataType     = <span class="dt">Float32</span>     <span class="co">#type of Float: Float32 or Float64</span>
+  parallel              :: <span class="dt">Bool</span>         = false       <span class="co">#compute proximal mappings, multiplier updates, rho and gamma updates in parallel</span>
+  zero_ini_guess        :: <span class="dt">Bool</span>         = true        <span class="co">#zero initial guess for primal, auxiliary, and multipliers</span></code></pre>
+<pre><code>#select working precision
+if options.FL==Float64
+  TF = Float64
+  TI = Int64
+elseif options.FL==Float32
+  TF = Float32
+  TI = Int32
+end</code></pre>
+<p>Set other performance related items that are not <code>SetIntersectionProjection</code> options. <code>SetIntersectionProjection</code> solution times will be affected by these. Do not forget to set <code>export JULIA_NUM_THREADS=2</code> or any other number of Julia threads that you want to use. In Julia you can check how many Julia threads will be used using the command <code>Threads.nthreads()</code> .</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">set_zero_subnormals(true)
+BLAS.set_num_threads(<span class="fl">2</span>)
+FFTW.set_num_threads(<span class="fl">2</span>)</code></pre>
+<p>Load an image or model that we want to projection onto the intersection.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">m = randn(<span class="fl">300</span>,<span class="fl">400</span>) <span class="co">#load image to project</span>
+
+<span class="co">#set up computational grid (25 and 6 m are the original distances between grid points)</span>
+comp_grid = compgrid((TF(<span class="fl">25.0</span>), TF(<span class="fl">6.0</span>)),(size(m,<span class="fl">1</span>), size(m,<span class="fl">2</span>))) <span class="co">#set up as compgrid( (dx,dy,dz) , (nx,ny,nz) )</span>
+<span class="co">#use as comp_grid.n and comp_grid.d</span>
+
+m = convert(<span class="dt">Vector</span>{TF},vec(m)) <span class="co">#PARSDMM needs the 2D/2D model as a vector, also in the right precision</span></code></pre>
+<p>We are ready to select the constraints that we want to use. The following block of code sets up and generates the linear operators and projectors onto each set separately. This part is optional, you can also use your own scripts to generate pairs of linear operators and projectors.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#constraints</span>
+constraint=<span class="dt">Dict</span>() <span class="co">#constraint information is stored in a dictionary</span>
+
+constraint[<span class="st">&quot;use_bounds&quot;</span>] = true     <span class="co">#use bound constraints</span>
+constraint[<span class="st">&quot;m_min&quot;</span>]      = <span class="fl">1500.0</span>
+constraint[<span class="st">&quot;m_max&quot;</span>]      = <span class="fl">4500.0</span>
+
+<span class="co">#bounds on parameters in a transform-domain</span>
+constraint[<span class="st">&quot;use_TD_bounds_1&quot;</span>] = true
+constraint[<span class="st">&quot;TDB_operator_1&quot;</span>]  = <span class="st">&quot;D_z&quot;</span> <span class="co">#choose any of the operators listed on the main page (&quot;D_x&quot;, &quot;D_z&quot;, &quot;D2D&quot;, &quot;identity&quot;, “DCT”, &quot;DFT&quot;, &quot;curvelet&quot;)</span>
+constraint[<span class="st">&quot;TD_LB_1&quot;</span>]         = <span class="fl">0.0</span> <span class="co">#transform-domain lower bound </span>
+constraint[<span class="st">&quot;TD_UB_1&quot;</span>]         = <span class="fl">1e6</span> <span class="co">#transform-domain upper bound</span>
+<span class="co">#we can define multiple bound constraints sets in multiple transform domains</span>
+<span class="co">#number 1 keeps track of how many we use</span>
+
+options.parallel       = false <span class="co">#indicate we are working in serial (1 Julia worker, but still use multi-threading)</span>
+
+
+(P_sub,TD_OP,set_Prop) = setup_constraints(constraint,comp_grid,options.FL)              <span class="co">#get projectors onto simple sets, linear operators, set information</span>
+(TD_OP,AtA,l,y)        = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options) <span class="co">#precompute and distribute quantities once, reuse later</span></code></pre>
+<p>Some properties of each set are stored in <code>set_Prop</code>. For example, we can see if set number 2 is non-convex using <code>set_Prop.ncvx[2]</code>. To see what set number 2 is, as generated by our scripts above, we can use <code>set_Prop.tag[2]</code>, which returns a tuple of (set description, linear operator description).</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">           ncvx       ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is the set non-convex? (true/false)</span>
+           AtA_diag   ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is A^T A a diagonal matrix?</span>
+           dense      ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is A a dense matrix?</span>
+           TD_n       ::<span class="dt">Vector</span>{<span class="dt">Tuple</span>}                                         <span class="co">#the grid dimensions in the transform-domain.</span>
+           tag        ::<span class="dt">Vector</span>{<span class="dt">Tuple</span>{<span class="dt">String</span>,<span class="dt">String</span>}}                          <span class="co">#(constraint type, linear operator description)</span>
+           banded     ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is A a banded matrix?</span>
+           AtA_offsets::<span class="dt">Union</span>{<span class="dt">Vector</span>{<span class="dt">Vector</span>{<span class="dt">Int32</span>}},<span class="dt">Vector</span>{<span class="dt">Vector</span>{<span class="dt">Int64</span>}}}    <span class="co">#only required if A is banded. A vector of indices of the non-zero diagonals, where the main diagonal is index 0</span></code></pre>
+<p>We are ready to solve the projection problem, using the projectors and linear operators generated as above, or using your own.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#project onto intersection, twice to get accurate timing</span>
+@time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);
+@time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);</code></pre>
+<p>Visualize the results.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#define axis limits and colorbar limits</span>
+xmax = comp_grid.d[<span class="fl">1</span>]*comp_grid.n[<span class="fl">1</span>]
+zmax = comp_grid.d[<span class="fl">2</span>]*comp_grid.n[<span class="fl">2</span>]
+vmi  = <span class="fl">1500</span>
+vma  = <span class="fl">4500</span>
+
+<span class="co">#project original model and the one that is projected onto the intersection</span>
+figure();imshow(reshape(m,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;model to project&quot;</span>)
+savefig(<span class="st">&quot;original_model.png&quot;</span>,bbox_inches=<span class="st">&quot;tight&quot;</span>)
+figure();imshow(reshape(x,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;Projection (bounds and bounds on D_z)&quot;</span>)
+savefig(<span class="st">&quot;projected_model.png&quot;</span>,bbox_inches=<span class="st">&quot;tight&quot;</span>)
+
+
+<span class="co">#plot PARSDMM logs</span>
+figure();
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">3</span>);semilogy(log_PARSDMM.r_pri)          ;title(<span class="st">&quot;r primal&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">4</span>);semilogy(log_PARSDMM.r_dual)         ;title(<span class="st">&quot;r dual&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">1</span>);semilogy(log_PARSDMM.obj)            ;title(L<span class="st">&quot;$ </span>\f<span class="st">rac{1}{2} || \mathbf{m}-\mathbf{x} ||_2^2 $&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">2</span>);semilogy(log_PARSDMM.set_feasibility);title(<span class="st">&quot;TD feasibility violation&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">5</span>);plot(log_PARSDMM.cg_it)              ;title(<span class="st">&quot;nr. of CG iterations&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">6</span>);semilogy(log_PARSDMM.cg_relres)      ;title(<span class="st">&quot;CG rel. res.&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">7</span>);semilogy(log_PARSDMM.rho)            ;title(<span class="st">&quot;rho&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">8</span>);plot(log_PARSDMM.gamma)              ;title(<span class="st">&quot;gamma&quot;</span>)
+subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">9</span>);semilogy(log_PARSDMM.evol_x)         ;title(<span class="st">&quot;x evolution&quot;</span>)
+tight_layout()
+<span class="co">#tight_layout(pad=0.0, w_pad=0.0, h_pad=1.0)</span>
+savefig(<span class="st">&quot;PARSDMM_logs.png&quot;</span>,bbox_inches=<span class="st">&quot;tight&quot;</span>)</code></pre>
+<p>Now we project onto the same intersection, but we solve the sub-problems in parallel. This means we compute the <span class="math scholmd-math-inline">\(y_i\)</span>-minimization (proximal maps), <span class="math scholmd-math-inline">\(v_i\)</span>-update (Lagrangian multipliers), <span class="math scholmd-math-inline">\(\rho_i\)</span> (augmented-Lagrangian penalty parameters), and <span class="math scholmd-math-inline">\(\gamma_i\)</span> (relaxation parameters) on different <code>Julia</code> workers for each index <span class="math scholmd-math-inline">\(i\)</span>.</p>
+<h1 id="parallel-parsdmm">Parallel PARSDMM</h1>
+<p>To activate this type of parallelism, we only need to set one flag (<code>options.parallel = true</code>):</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">options.parallel       = true
+
+<span class="co">#if we change to parallel computions, we need to repeat the precomputations and distribution</span>
+(P_sub,TD_OP,set_Prop) = setup_constraints(constraint,comp_grid,options.FL)
+(TD_OP,AtA,l,y)        = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options)
+
+@time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);
+@time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);</code></pre>
+<h1 id="serial-multilevel-parsdmm">Serial Multilevel PARSDMM</h1>
+<p>First we need to decide on the number of levels and the coarsening factor.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia">options.parallel = false
+
+<span class="co">#2 levels, the gird point spacing at level 2 is 3X that of the original (level 1) grid</span>
+n_levels          = <span class="fl">2</span> <span class="co">#integer</span>
+coarsening_factor = <span class="fl">3</span> <span class="co">#float</span></code></pre>
+<p>The multilevel version of PARSDMM has a slightly different setup. What we did before as part of <code>PARSDMM_precompute_distribute</code>, is now included as part of <code>setup_multi_level_PARSDMM</code>. The quantity <code>TD_OP_levels</code> is a vector of vectors of linear operators. Access linear operator number <span class="math scholmd-math-inline">\(1\)</span> on level <span class="math scholmd-math-inline">\(2\)</span> as <code>TD_OP_levels = TD_OP[2][1]</code>, so the first index refers to the level.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#set up all required quantities for each level</span>
+(TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels) = setup_multi_level_PARSDMM(m,n_levels,coarsening_factor,comp_grid,constraint,options)
+
+@time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);
+@time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);</code></pre>
+<h1 id="parallel-multilevel-parsdmm">Parallel Multilevel PARSDMM</h1>
+<p>The only difference from serial multilevel PARSDMM is the flag <code>options.parallel = true</code>.</p>
+<pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#now use multi-level with parallel PARSDMM</span>
+options.parallel = true
+
+<span class="co">#2 levels, the gird point spacing at level 2 is 3X that of the original (level 1) grid</span>
+n_levels=<span class="fl">2</span>
+coarsening_factor=<span class="fl">3</span>
+
+<span class="co">#set up all required quantities for each level</span>
+(TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels) = setup_multi_level_PARSDMM(m,n_levels,coarsening_factor,comp_grid,constraint,options)
+
+@time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);
+@time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);</code></pre>
+<div class="references">
+
+</div>
+</div>
+</div>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+    tex2jax: {
+      processClass: "math"
+    },
+    TeX: {
+        TagSide: "left",
+        TagIndent: "1.2em",
+        equationNumbers: {
+            autoNumber: "AMS"
+        },
+        Macros: {
+            ensuremath: ["#1",1],
+            textsf: ["\\mathsf{\\text{#1}}",1],
+            texttt: ["\\mathtt{\\text{#1}}",1]
+        }
+    },
+    "HTML-CSS": { 
+        scale: 100,
+        availableFonts: ["TeX"], 
+        preferredFont: "TeX",
+        webFont: "TeX",
+        imageFont: "TeX",
+        EqnChunk: 1000
+    }
+});
+</script>
+<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+</div>
+</body>
+</html>
