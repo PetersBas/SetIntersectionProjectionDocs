@@ -9,7 +9,7 @@ We show how we can compute projections onto an intersection of multiple sets usi
 @everywhere using SetIntersectionProjection
 using PyPlot #optional, for plotting only
 
-type compgrid #define a computational grid information type
+mutable struct compgrid #define a computational grid information type
   d :: Tuple
   n :: Tuple
 end
@@ -76,19 +76,27 @@ We are ready to select the constraints that we want to use. The following block 
 
 ```julia
 #constraints
-constraint=Dict() #constraint information is stored in a dictionary
+constraint = Vector{SetIntersectionProjection.set_definitions}() #Initialize constraint information
 
-constraint["use_bounds"] = true		#use bound constraints
-constraint["m_min"]      = 1500.0
-constraint["m_max"]      = 4500.0
+#bounds:
+m_min     = 1500.0
+m_max     = 4500.0
+set_type  = "bounds"
+TD_OP     = "identity"
+app_mode  = ("matrix","")
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
 
-#bounds on parameters in a transform-domain
-constraint["use_TD_bounds_1"] = true
-constraint["TDB_operator_1"]  = "D_z" #choose any of the operators listed on the main page ("D_x", "D_z", "D2D", "identity", “DCT”, "DFT", "curvelet")
-constraint["TD_LB_1"]         = 0.0 #transform-domain lower bound 
-constraint["TD_UB_1"]         = 1e6 #transform-domain upper bound
-#we can define multiple bound constraints sets in multiple transform domains
-#number 1 keeps track of how many we use
+
+#slope constraints (vertical)
+m_min     = 0.0 #transform-domain lower bound (may be a vector for bound constraints)
+m_max     = 1e6 #transform-domain upper bound (may be a vector for bound constraints)
+set_type  = "bounds"
+TD_OP     = "D_z" #choose any of the operators listed on the main page ("D_x", "D_z", "D2D", "identity", “DCT”, "DFT", "curvelet")
+app_mode  = ("matrix","")
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
+
 
 options.parallel       = false #indicate we are working in serial (1 Julia worker, but still use multi-threading)
 
@@ -164,7 +172,7 @@ options.parallel       = true
 @time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);
 ```
 
-#Serial Multilevel PARSDMM
+#Multilevel Serial PARSDMM
 First we need to decide on the number of levels and the coarsening factor.
 ```julia
 options.parallel = false
@@ -184,7 +192,7 @@ The multilevel version of PARSDMM has a slightly different setup. What we did be
 @time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);
 ```
 
-#Parallel Multilevel PARSDMM
+#Multilevel Parallel PARSDMM
 The only difference from serial multilevel PARSDMM is the flag `options.parallel = true`.
 
 ```julia

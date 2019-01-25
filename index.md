@@ -9,7 +9,7 @@ classoption:
     - paper
 ---
 
-**SetIntersectionProjection** is a **Julia** 0.6 package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (``m \in \mathbb{R}^N``) onto intersections of ``p`` convex and non-convex sets:
+**SetIntersectionProjection** is a **Julia** package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (``m \in \mathbb{R}^N``) onto intersections of ``p`` convex and non-convex sets:
 
 ```math
 \mathcal{P}_{\mathcal{V}} (m) \in \arg\min_{x} \frac{1}{2} \| x - m \|_2^2 \quad \text{subject to} \quad x \in\bigcap_{i=1}^p \mathcal{V}_i.
@@ -22,13 +22,13 @@ Our main algorithm, **Projection Adaptive Relaxed Simultaneous Direction Method 
 
 Each set ``\mathcal{V_i}`` is characterized as an 'elementary' set ``\mathcal{C_i}``, for which we know a closed-form projection (``\ell_1``-ball, ``\ell_2``-ball, bounds, nuclear norm, rank, cardinality, annulus, ...) and a linear operator ``A_i`` (discrete derivatives, DFT, DCT, Curvelet transform, anisotropic total-variation,...). For example, if we have ``\mathcal{V} = \{ x \: | \: \| Ax \|_1 \leq \sigma \}``, then we use a linear operator ``A`` and set ``\mathcal{C} = \{ y \: | \: \| y \|_1 \leq \sigma \}`` with additional equality constraints ``Ax=y``.
 
-The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and linear operator ``A_i``. 
+The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and linear operators ``A_i``. 
 
  **SetIntersectionProjection** is designed
  
-- for applications in imaging inverse problems
-- as the projector onto an intersection of constraint sets to solve ``\min_{m} f(m)  \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i`` with a spectral projected gradient / projected quasi-Newton / projected-Newton method. 
-- as a solver for linear inverse problem with forward operator ``F \in \mathbb{R}^{M \times N}``, data constraints such as ``\mathcal{C}^\text{data} = \{ x \: | \: \bl[j] \leq (Fx - d_\text{observed})[j] \leq \bu[j] \}``, ``\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}`` where index ``[j]`` indicates a vector entry, and model property constraints formulated as
+- for applications in imaging inverse problems.
+- as the projector onto an intersection of constraint sets, as a plug-in for other algorithms that solve ``\min_{m} f(m)  \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i``, e.g., a (spectral) projected gradient / projected quasi-Newton / projected-Newton method. 
+- as a solver for linear inverse problem with forward operator ``F \in \mathbb{R}^{M \times N}``, data constraints such as ``\mathcal{C}^\text{data} = \{ x \: | \: \bl[j] \leq (Fx - d_\text{observed})[j] \leq \bu[j] \}`` or ``\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}`` where index ``[j]`` indicates a vector entry, and model property constraints formulated as
 	```math
 	\min_{x,y_i} \frac{1}{2}\| x - m \|_2^2 + \sum_{i=1}^{p} \iota_{\mathcal{C}_i}(y_i) + \iota_{\mathcal{C}_{p+1}^\text{data}}(y_{p+1})\quad \text{s.t.} \quad \begin{cases}
 	A_i x = y_i \\ Fx=y_{p+1}
@@ -53,17 +53,17 @@ The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and l
 ## List of constraints & linear operators
 
 #### Table: {#set-overview}
-|  descriptions | set | code
-|--- |--- | --- |
-| bounds  | ``\{ m \: | \: l[i] \leq m[i] \leq u[i] \}``| `constraint["use_bounds"]`, `constraint["m_min"]=l`, `constraint["m_max"]=u` |
+|  descriptions | set |
+|--- |--- | 
+| bounds  | ``\{ m \: | \: l[i] \leq m[i] \leq u[i] \}``| `m_min     = 0.0`,`m_max     = 255.0`, `set_type  = "bounds"`, `TD_OP     = "identity"`, `app_mode  = ("matrix","")`,`custom_TD_OP = ([],false)` |
 | transform-domain bounds | ``\{ m \: | \: l[i] \leq (A m)[i] \leq b[i] \}`` | `constraint["use_TD_bounds_1"]=true`, `constraint["TD_LB_1"]=l`, `constraint["TD_UB_1"]=u` `constraint["TDB_operator_1"]=A` |
-| (special case) vertical (approximate) monotonicity | ``\{ m \: | \: l[i] \leq (I_x \otimes D_z) m)[i] \leq u[i] \}`` | `constraint["use_TD_bounds_1"]=true`, `constraint["TD_LB_1"]=-eps`, `constraint["TD_UB_1"]=+eps`, `constraint["TDB_operator_1"]=D_z` |
+| (special case) vertical (approximate) monotonicity | ``\{ m \: | \: l[i] \leq (D_z \otimes I_x) m)[i] \leq u[i] \}`` | `constraint["use_TD_bounds_1"]=true`, `constraint["TD_LB_1"]=-eps`, `constraint["TD_UB_1"]=+eps`, `constraint["TDB_operator_1"]=D_z` |
 | transform-domain ``\ell_1`` | ``\{ m \: | \: \| A m \|_1 \leq \sigma \}`` | `constraint["use_TD_l1_1"]=true`, `constraint["TD_l1_operator_1"]=A`, `constraint["TD_l1_sigma_1"] = sigma` |
 | transform-domain ``\ell_2`` | ``\{ m \: | \: \| A m \|_2 \leq \sigma \}`` | `constraint["use_TD_l2_1"]=true`, `constraint["TD_l2_operator_1"]=A`, `constraint["TD_l2_sigma_1"] = sigma` |
 | transform-domain annulus | ``\{ m \: | \: \sigma_l \leq \| A m \|_2 \leq \sigma_u \}`` | `constraint["use_TD_annulus_1"]=true`, `constraint["TD_annulus_operator_1"]=A`, `constraint["TD_annulus_sigma_min_1"] = sigma_l`, `constraint["TD_annulus_sigma_max_1"] = sigma_u` |
-| transform-domain cardinality | ``\{ m \: | \: \textbf{card}(Am) \leq k \}``, ``k`` is a positive integer | `constraint["use_TD_card_1"]=true`, `constraint["TD_card_operator_1``]=A`, `constraint["card_1"]` |
-| transform-domain nuclear norm | ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma \}``, with ``Am = \textbf{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )`` is the SVD | `constraint["use_TD_nuclear_1_"]=true`, `constraint["TD_nuclear_operator_1"]=A`, `constraint["TD_nuclear_norm_1"]  = sigma` |
-| transform-domain rank constraint | ``\{ m \: | \:  Am = \textbf{vec}( \sum_{j=1}^{r}\lambda[j] u_j v_j^*) \}``, ``r < \text{min}(n_z,n_x)`` | `constraint["use_TD_rank_1"]=true`, `constraint["TD_rank_operator_1"]=A`, `constraint["max_TD_rank_1"]=r` |
+| transform-domain cardinality | ``\{ m \: | \: \operatorname{card}(Am) \leq k \}``, ``k`` is a positive integer | `constraint["use_TD_card_1"]=true`, `constraint["TD_card_operator_1``]=A`, `constraint["card_1"]` |
+| transform-domain nuclear norm | ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma \}``, with ``Am = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )`` is the SVD | `constraint["use_TD_nuclear_1_"]=true`, `constraint["TD_nuclear_operator_1"]=A`, `constraint["TD_nuclear_norm_1"]  = sigma` |
+| transform-domain rank constraint | ``\{ m \: | \:  Am = \operatorname{vec}( \sum_{j=1}^{r}\lambda[j] u_j v_j^*) \}``, ``r < \text{min}(n_z,n_x)`` | `constraint["use_TD_rank_1"]=true`, `constraint["TD_rank_operator_1"]=A`, `constraint["max_TD_rank_1"]=r` |
 | subspace constraints | ``\{ m \: | m = A c, \:\: c \in \mathbb{C}^M \}`` | `constraint["use_subspace"]=true`, `constraint["A"]=A`, `constraint["subspace_orthogonal"]=true`
 
 : Overview of constraint sets that the software currently supports. A new constraint set may be added by providing a projection onto the set (without linear operator) and a sparse linear operator or equivalent matrix-vector product together with its adjoint. Vector entries are indexed as ``m[i]``.
@@ -72,15 +72,14 @@ The inputs for the algorithm are pairs of projector onto ``\mathcal{C}_i`` and l
 #### Table: {#LOP-overview}
 |  descriptions | Linear operator | code
 |--- |--- | --- |
-|discrete derivative in one direction | ``I_x \otimes D_z`` , ``D_x \otimes I_z`` | "D_z", "D_x" 	|
-|discrete derivative in all directions | ``\begin{pmatrix} I_x \otimes D_z \\ D_x \otimes I_z \end{pmatrix}`` | "D2D" or "D3D" | 
+|discrete derivative in one direction | ``D_z \otimes I_x`` , ``I_z \otimes D_x`` | "D_z", "D_x" 	|
+|discrete derivative in all directions | ``\begin{pmatrix} D_z \otimes I_x \\ I_z \otimes D_x \end{pmatrix}`` | "D2D" or "D3D" | 
 | identity matrix | ``I`` | "identity" |
 | discrete cosine transform | | "DCT" |
 | discrete Fourier transform | | "DFT" |
 | curvelet transform | | "curvelet" |
 
 : Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types `SparseMatrixCSC` or `JOLI` operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case.
-
 
 ## Applications
 
@@ -107,7 +106,7 @@ using SetIntersectionProjection
 using MAT
 using PyPlot
 
-type compgrid
+mutable struct compgrid
   d :: Tuple
   n :: Tuple
 end
@@ -142,16 +141,27 @@ We provide scripts to generate projectors and linear operators, but you can buil
 
 ```julia
 #constraints
-constraint=Dict() #initialize dictionary
+constraint = Vector{SetIntersectionProjection.set_definitions}() #Initialize constraint information
 
-constraint["use_bounds"] = true
-constraint["m_min"] 	 = 1500.0
-constraint["m_max"] 	 = 4500.0
+#bounds:
+m_min     = 1500.0
+m_max     = 4500.0
+set_type  = "bounds"
+TD_OP     = "identity"
+app_mode  = ("matrix","")
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
 
-constraint["use_TD_bounds_1"] = true
-constraint["TDB_operator_1"]  = "D_z"
-constraint["TD_LB_1"] 		  = 0.0
-constraint["TD_UB_1"] 		  = 1e6
+
+#slope constraints (vertical)
+m_min     = 0.0
+m_max     = 1e6
+set_type  = "bounds"
+TD_OP     = "D_z"
+app_mode  = ("matrix","")
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
+
 
 options.parallel       = false
 (P_sub,TD_OP,set_Prop) = setup_constraints(constraint,comp_grid,options.FL)
