@@ -1,1 +1,1 @@
-# html_doc_test
+# Documentation for https://github.com/slimgroup/SetIntersectionProjection.jl
