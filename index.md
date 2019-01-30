@@ -88,8 +88,6 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
 
 ## Examples of parallel and multilevel functionality
  - [Tutorial](docs/README_Tutorial.html)
- - [Project a 2D image onto an intersection of sets with parallel and multilevel PARSDMM](examples/projection_intersection_2D.jl)
- - [Project a 3D image onto an intersection of sets with parallel and multilevel PARSDMM](examples/projection_intersection_3D.jl)
   
 ## Performance
 
