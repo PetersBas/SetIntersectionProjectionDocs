@@ -1,6 +1,6 @@
 # Frequency domain Full-Waveform Inversion (FWI) with constraints
 
-[Julia script for this example](../examples/constrained_freq_FWI_simple.jl)
+[Julia script for this example](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/constrained_freq_FWI_simple.jl)
 
 
 Seismic full-waveform inversion (FWI) estimates rock properties (acoustic velocity in this example) from seismic signals (pressure) measured by hydrophones. FWI is a partial-differential-equation (PDE) constrained optimization problem where after eliminating the PDE constraint, the simulated data, ``d_\text{predicted}(m) \in \mathbb{C}^M``, are connected nonlinearly to the unknown model parameters, ``m \in \mathbb{R}^N``. We assume that we know the source and receiver locations, as well as the source function. A classic example of an objective for FWI is the nonlinear least-squares misfit ``f(m)=1/2 \| d_\text{obs} - d_\text{predicted}(m) \|_2^2``, which we use for this numerical experiment.

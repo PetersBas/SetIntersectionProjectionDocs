@@ -1,6 +1,6 @@
 # Tutorial example
 
-[Julia script for this example](../examples/projection_intersection_2D.jl)
+[Julia script for this example](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/projection_intersection_2D.jl)
 
 We show how we can compute projections onto an intersection of multiple sets using PARSDMM, parallel PARSDMM, multilevel PARSDMM and multilevel parallel PARSDMM.
 

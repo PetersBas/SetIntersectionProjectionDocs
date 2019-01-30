@@ -1,8 +1,8 @@
 # Learning a parametrized intersection from a few training examples
 
-[Julia script for this example a) (joint image denoising+deblurring+inpainting)](../examples/Ecuador_deblurring_inpainting/deblurring_inpainting_by_constraint_learning_SA.jl)
+[Julia script for this example a) (joint image denoising+deblurring+inpainting)](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/Ecuador_denoising_deblurring_inpainting/denoising_deblurring_inpainting_by_constraint_learning_SA.jl)
 
-[Julia script for this example b) (image desaturation)](../examples/Indonesia_deblurring/image_desaturation_by_constraint_learning.jl)
+[Julia script for this example b) (image desaturation)](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/Indonesia_desaturation/image_desaturation_by_constraint_learning.jl)
 
 The applications of interest for this example are linear inverse problems, such as removing motion blur with a known blurring kernel and inpainting of missing pixels, single-image super-resolution, denoising, and desaturation of saturated images. We use aerial photos as the target. We can solve these various image processing tasks with the following simple strategy:
 
