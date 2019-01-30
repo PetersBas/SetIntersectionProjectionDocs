@@ -32,19 +32,19 @@ code > span.al { color: #ff0000; font-weight: bold; }
 code > span.fu { color: #06287e; }
 code > span.er { color: #ff0000; font-weight: bold; }
   </style>
-  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+  <link rel="stylesheet" href="https://slimgroup.slim.gatech.edu/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
 </head>
 <body>
 <div class="scholmd-container">
 <div class="scholmd-main">
 <div class="scholmd-content">
 <h1 id="tutorial-example">Tutorial example</h1>
-<p><a href="../examples/projection_intersection_2D.jl">Julia script for this example</a></p>
+<p><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/projection_intersection_2D.jl">Julia script for this example</a></p>
 <p>We show how we can compute projections onto an intersection of multiple sets using PARSDMM, parallel PARSDMM, multilevel PARSDMM and multilevel parallel PARSDMM.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia">@everywhere using SetIntersectionProjection
 using PyPlot <span class="co">#optional, for plotting only</span>
 
-<span class="kw">type</span> compgrid <span class="co">#define a computational grid information type</span>
+mutable struct compgrid <span class="co">#define a computational grid information type</span>
   d :: <span class="dt">Tuple</span>
   n :: <span class="dt">Tuple</span>
 <span class="kw">end</span></code></pre>
@@ -91,19 +91,27 @@ comp_grid = compgrid((TF(<span class="fl">25.0</span>), TF(<span class="fl">6.0<
 m = convert(<span class="dt">Vector</span>{TF},vec(m)) <span class="co">#PARSDMM needs the 2D/2D model as a vector, also in the right precision</span></code></pre>
 <p>We are ready to select the constraints that we want to use. The following block of code sets up and generates the linear operators and projectors onto each set separately. This part is optional, you can also use your own scripts to generate pairs of linear operators and projectors.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#constraints</span>
-constraint=<span class="dt">Dict</span>() <span class="co">#constraint information is stored in a dictionary</span>
+constraint = <span class="dt">Vector</span>{SetIntersectionProjection.set_definitions}() <span class="co">#Initialize constraint information</span>
 
-constraint[<span class="st">&quot;use_bounds&quot;</span>] = true     <span class="co">#use bound constraints</span>
-constraint[<span class="st">&quot;m_min&quot;</span>]      = <span class="fl">1500.0</span>
-constraint[<span class="st">&quot;m_max&quot;</span>]      = <span class="fl">4500.0</span>
+<span class="co">#bounds:</span>
+m_min     = <span class="fl">1500.0</span>
+m_max     = <span class="fl">4500.0</span>
+set_type  = <span class="st">&quot;bounds&quot;</span>
+TD_OP     = <span class="st">&quot;identity&quot;</span>
+app_mode  = (<span class="st">&quot;matrix&quot;</span>,<span class="st">&quot;&quot;</span>)
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
 
-<span class="co">#bounds on parameters in a transform-domain</span>
-constraint[<span class="st">&quot;use_TD_bounds_1&quot;</span>] = true
-constraint[<span class="st">&quot;TDB_operator_1&quot;</span>]  = <span class="st">&quot;D_z&quot;</span> <span class="co">#choose any of the operators listed on the main page (&quot;D_x&quot;, &quot;D_z&quot;, &quot;D2D&quot;, &quot;identity&quot;, “DCT”, &quot;DFT&quot;, &quot;curvelet&quot;)</span>
-constraint[<span class="st">&quot;TD_LB_1&quot;</span>]         = <span class="fl">0.0</span> <span class="co">#transform-domain lower bound </span>
-constraint[<span class="st">&quot;TD_UB_1&quot;</span>]         = <span class="fl">1e6</span> <span class="co">#transform-domain upper bound</span>
-<span class="co">#we can define multiple bound constraints sets in multiple transform domains</span>
-<span class="co">#number 1 keeps track of how many we use</span>
+
+<span class="co">#slope constraints (vertical)</span>
+m_min     = <span class="fl">0.0</span> <span class="co">#transform-domain lower bound (may be a vector for bound constraints)</span>
+m_max     = <span class="fl">1e6</span> <span class="co">#transform-domain upper bound (may be a vector for bound constraints)</span>
+set_type  = <span class="st">&quot;bounds&quot;</span>
+TD_OP     = <span class="st">&quot;D_z&quot;</span> <span class="co">#choose any of the operators listed on the main page (&quot;D_x&quot;, &quot;D_z&quot;, &quot;D2D&quot;, &quot;identity&quot;, “DCT”, &quot;DFT&quot;, &quot;curvelet&quot;)</span>
+app_mode  = (<span class="st">&quot;matrix&quot;</span>,<span class="st">&quot;&quot;</span>)
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
+
 
 options.parallel       = false <span class="co">#indicate we are working in serial (1 Julia worker, but still use multi-threading)</span>
 
@@ -161,7 +169,7 @@ savefig(<span class="st">&quot;PARSDMM_logs.png&quot;</span>,bbox_inches=<span c
 
 @time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);
 @time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);</code></pre>
-<h1 id="serial-multilevel-parsdmm">Serial Multilevel PARSDMM</h1>
+<h1 id="multilevel-serial-parsdmm">Multilevel Serial PARSDMM</h1>
 <p>First we need to decide on the number of levels and the coarsening factor.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia">options.parallel = false
 
@@ -174,7 +182,7 @@ coarsening_factor = <span class="fl">3</span> <span class="co">#float</span></co
 
 @time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);
 @time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);</code></pre>
-<h1 id="parallel-multilevel-parsdmm">Parallel Multilevel PARSDMM</h1>
+<h1 id="multilevel-parallel-parsdmm">Multilevel Parallel PARSDMM</h1>
 <p>The only difference from serial multilevel PARSDMM is the flag <code>options.parallel = true</code>.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#now use multi-level with parallel PARSDMM</span>
 options.parallel = true
@@ -220,8 +228,8 @@ MathJax.Hub.Config({
     }
 });
 </script>
-<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
-<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+<script src="https://slimgroup.slim.gatech.edu/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://slimgroup.slim.gatech.edu/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
 </div>
 </body>
 </html>

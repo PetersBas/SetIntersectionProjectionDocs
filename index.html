@@ -32,7 +32,7 @@ code > span.al { color: #ff0000; font-weight: bold; }
 code > span.fu { color: #06287e; }
 code > span.er { color: #ff0000; font-weight: bold; }
   </style>
-  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+  <link rel="stylesheet" href="https://slimgroup.slim.gatech.edu/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
 </head>
 <body>
 <div class="scholmd-container">
@@ -65,7 +65,7 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <p>Bas Peters<sup>*</sup>, Felix J. Herrmann<sup>#</sup><br /><sup>*</sup>University of British Columbia.<br /><sup>#</sup>Georgia Institute of Technology</p>
 </div>
 </header>
-<p><strong>SetIntersectionProjection</strong> is a <strong>Julia</strong> 0.6 package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (<span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>) onto intersections of <span class="math scholmd-math-inline">\(p\)</span> convex and non-convex sets: 
+<p><strong>SetIntersectionProjection</strong> is a <strong>Julia</strong> package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (<span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>) onto intersections of <span class="math scholmd-math-inline">\(p\)</span> convex and non-convex sets: 
 <span class="math scholmd-math-display" style="display: block;">\[
 \begin{equation*}
 \mathcal{P}_{\mathcal{V}} (m) \in \arg\min_{x} \frac{1}{2} \| x - m \|_2^2 \quad \text{subject to} \quad x \in\bigcap_{i=1}^p \mathcal{V}_i.
@@ -78,12 +78,12 @@ code > span.er { color: #ff0000; font-weight: bold; }
 \end{equation*}
 \]</span>
  Each set <span class="math scholmd-math-inline">\(\mathcal{V_i}\)</span> is characterized as an ‘elementary’ set <span class="math scholmd-math-inline">\(\mathcal{C_i}\)</span>, for which we know a closed-form projection (<span class="math scholmd-math-inline">\(\ell_1\)</span>-ball, <span class="math scholmd-math-inline">\(\ell_2\)</span>-ball, bounds, nuclear norm, rank, cardinality, annulus, …) and a linear operator <span class="math scholmd-math-inline">\(A_i\)</span> (discrete derivatives, DFT, DCT, Curvelet transform, anisotropic total-variation,…). For example, if we have <span class="math scholmd-math-inline">\(\mathcal{V} = \{ x \: | \: \| Ax \|_1 \leq \sigma \}\)</span>, then we use a linear operator <span class="math scholmd-math-inline">\(A\)</span> and set <span class="math scholmd-math-inline">\(\mathcal{C} = \{ y \: | \: \| y \|_1 \leq \sigma \}\)</span> with additional equality constraints <span class="math scholmd-math-inline">\(Ax=y\)</span>.</p>
-<p>The inputs for the algorithm are pairs of projector onto <span class="math scholmd-math-inline">\(\mathcal{C}_i\)</span> and linear operator <span class="math scholmd-math-inline">\(A_i\)</span>.</p>
+<p>The inputs for the algorithm are pairs of projectors onto <span class="math scholmd-math-inline">\(\mathcal{C}_i\)</span> and linear operators <span class="math scholmd-math-inline">\(A_i\)</span>.</p>
 <p><strong>SetIntersectionProjection</strong> is designed</p>
 <ul>
-<li>for applications in imaging inverse problems</li>
-<li>as the projector onto an intersection of constraint sets to solve <span class="math scholmd-math-inline">\(\min_{m} f(m) \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i\)</span> with a spectral projected gradient / projected quasi-Newton / projected-Newton method.</li>
-<li>as a solver for linear inverse problem with forward operator <span class="math scholmd-math-inline">\(F \in \mathbb{R}^{M \times N}\)</span>, data constraints such as <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \bl[j] \leq (Fx - d_\text{observed})[j] \leq \bu[j] \}\)</span>, <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}\)</span> where index <span class="math scholmd-math-inline">\([j]\)</span> indicates a vector entry, and model property constraints formulated as 
+<li>for applications in imaging inverse problems.</li>
+<li>as the projector onto an intersection of constraint sets, as a plug-in for other algorithms that solve <span class="math scholmd-math-inline">\(\min_{m} f(m) \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i\)</span>, e.g., a (spectral) projected gradient / projected quasi-Newton / projected-Newton method.</li>
+<li>as a solver for linear inverse problem with forward operator <span class="math scholmd-math-inline">\(F \in \mathbb{R}^{M \times N}\)</span>, data constraints such as <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \bl[j] \leq (Fx - d_\text{observed})[j] \leq \bu[j] \}\)</span> or <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}\)</span> where index <span class="math scholmd-math-inline">\([j]\)</span> indicates a vector entry, and model property constraints formulated as 
 <span class="math scholmd-math-display" style="display: block;">\[
 \begin{equation*}
 \min_{x,y_i} \frac{1}{2}\| x - m \|_2^2 + \sum_{i=1}^{p} \iota_{\mathcal{C}_i}(y_i) + \iota_{\mathcal{C}_{p+1}^\text{data}}(y_{p+1})\quad \text{s.t.} \quad \begin{cases}
@@ -114,59 +114,48 @@ A_i x = y_i \\ Fx=y_{p+1}
 <tr class="header">
 <th style="text-align: left;">descriptions</th>
 <th style="text-align: left;">set</th>
-<th style="text-align: left;">code</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">bounds</td>
 <td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: l[i] \leq m[i] \leq u[i] \}\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_bounds&quot;]</code>, <code>constraint[&quot;m_min&quot;]=l</code>, <code>constraint[&quot;m_max&quot;]=u</code></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">transform-domain bounds</td>
 <td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: l[i] \leq (A m)[i] \leq b[i] \}\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_bounds_1&quot;]=true</code>, <code>constraint[&quot;TD_LB_1&quot;]=l</code>, <code>constraint[&quot;TD_UB_1&quot;]=u</code> <code>constraint[&quot;TDB_operator_1&quot;]=A</code></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">(special case) vertical (approximate) monotonicity</td>
-<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: l[i] \leq (I_x \otimes D_z) m)[i] \leq u[i] \}\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_bounds_1&quot;]=true</code>, <code>constraint[&quot;TD_LB_1&quot;]=-eps</code>, <code>constraint[&quot;TD_UB_1&quot;]=+eps</code>, <code>constraint[&quot;TDB_operator_1&quot;]=D_z</code></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: l[i] \leq (D_z \otimes I_x) m)[i] \leq u[i] \}\)</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">transform-domain <span class="math scholmd-math-inline">\(\ell_1\)</span></td>
 <td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \| A m \|_1 \leq \sigma \}\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_l1_1&quot;]=true</code>, <code>constraint[&quot;TD_l1_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_l1_sigma_1&quot;] = sigma</code></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">transform-domain <span class="math scholmd-math-inline">\(\ell_2\)</span></td>
 <td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \| A m \|_2 \leq \sigma \}\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_l2_1&quot;]=true</code>, <code>constraint[&quot;TD_l2_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_l2_sigma_1&quot;] = sigma</code></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">transform-domain annulus</td>
 <td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_l \leq \| A m \|_2 \leq \sigma_u \}\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_annulus_1&quot;]=true</code>, <code>constraint[&quot;TD_annulus_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_annulus_sigma_min_1&quot;] = sigma_l</code>, <code>constraint[&quot;TD_annulus_sigma_max_1&quot;] = sigma_u</code></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">transform-domain cardinality</td>
-<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \textbf{card}(Am) \leq k \}\)</span>, <span class="math scholmd-math-inline">\(k\)</span> is a positive integer</td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_card_1&quot;]=true</code>, <code>constraint[&quot;TD_card_operator_1``]=A</code>, <code>constraint[&quot;card_1&quot;]</code></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \operatorname{card}(Am) \leq k \}\)</span>, <span class="math scholmd-math-inline">\(k\)</span> is a positive integer</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">transform-domain nuclear norm</td>
-<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma \}\)</span>, with <span class="math scholmd-math-inline">\(Am = \textbf{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )\)</span> is the SVD</td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_nuclear_1_&quot;]=true</code>, <code>constraint[&quot;TD_nuclear_operator_1&quot;]=A</code>, <code>constraint[&quot;TD_nuclear_norm_1&quot;]  = sigma</code></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma \}\)</span>, with <span class="math scholmd-math-inline">\(Am = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )\)</span> is the SVD</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">transform-domain rank constraint</td>
-<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: Am = \textbf{vec}( \sum_{j=1}^{r}\lambda[j] u_j v_j^*) \}\)</span>, <span class="math scholmd-math-inline">\(r &lt; \text{min}(n_z,n_x)\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_TD_rank_1&quot;]=true</code>, <code>constraint[&quot;TD_rank_operator_1&quot;]=A</code>, <code>constraint[&quot;max_TD_rank_1&quot;]=r</code></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | \: Am = \operatorname{vec}( \sum_{j=1}^{r}\lambda[j] u_j v_j^*) \}\)</span>, <span class="math scholmd-math-inline">\(r &lt; \text{min}(n_z,n_x)\)</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">subspace constraints</td>
 <td style="text-align: left;"><span class="math scholmd-math-inline">\(\{ m \: | m = A c, \:\: c \in \mathbb{C}^M \}\)</span></td>
-<td style="text-align: left;"><code>constraint[&quot;use_subspace&quot;]=true</code>, <code>constraint[&quot;A&quot;]=A</code>, <code>constraint[&quot;subspace_orthogonal&quot;]=true</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -184,12 +173,12 @@ A_i x = y_i \\ Fx=y_{p+1}
 <tbody>
 <tr class="odd">
 <td style="text-align: left;">discrete derivative in one direction</td>
-<td style="text-align: left;"><span class="math scholmd-math-inline">\(I_x \otimes D_z\)</span> , <span class="math scholmd-math-inline">\(D_x \otimes I_z\)</span></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(D_z \otimes I_x\)</span> , <span class="math scholmd-math-inline">\(I_z \otimes D_x\)</span></td>
 <td style="text-align: left;">“D_z”, “D_x”</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">discrete derivative in all directions</td>
-<td style="text-align: left;"><span class="math scholmd-math-inline">\(\begin{pmatrix} I_x \otimes D_z \\ D_x \otimes I_z \end{pmatrix}\)</span></td>
+<td style="text-align: left;"><span class="math scholmd-math-inline">\(\begin{pmatrix} D_z \otimes I_x \\ I_z \otimes D_x \end{pmatrix}\)</span></td>
 <td style="text-align: left;">“D2D” or “D3D”</td>
 </tr>
 <tr class="odd">
@@ -238,7 +227,7 @@ A_i x = y_i \\ Fx=y_{p+1}
 using MAT
 using PyPlot
 
-<span class="kw">type</span> compgrid
+mutable struct compgrid
   d :: <span class="dt">Tuple</span>
   n :: <span class="dt">Tuple</span>
 <span class="kw">end</span>
@@ -268,16 +257,27 @@ m         = convert(<span class="dt">Vector</span>{TF},vec(m))</code></pre>
 <p>Now we are ready to decide what constraints we want to use. We select bounds constraints (bounds may be scalar or vector valued) as well as bound constraints on the vertical (z-direction) discrete derivative of the image. This also known as a slope constraint and we use it to achieve monotonicity of the pixel values from top to bottom.</p>
 <p>We provide scripts to generate projectors and linear operators, but you can build your own as well.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#constraints</span>
-constraint=<span class="dt">Dict</span>() <span class="co">#initialize dictionary</span>
+constraint = <span class="dt">Vector</span>{SetIntersectionProjection.set_definitions}() <span class="co">#Initialize constraint information</span>
 
-constraint[<span class="st">&quot;use_bounds&quot;</span>] = true
-constraint[<span class="st">&quot;m_min&quot;</span>]      = <span class="fl">1500.0</span>
-constraint[<span class="st">&quot;m_max&quot;</span>]      = <span class="fl">4500.0</span>
+<span class="co">#bounds:</span>
+m_min     = <span class="fl">1500.0</span>
+m_max     = <span class="fl">4500.0</span>
+set_type  = <span class="st">&quot;bounds&quot;</span>
+TD_OP     = <span class="st">&quot;identity&quot;</span>
+app_mode  = (<span class="st">&quot;matrix&quot;</span>,<span class="st">&quot;&quot;</span>)
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
 
-constraint[<span class="st">&quot;use_TD_bounds_1&quot;</span>] = true
-constraint[<span class="st">&quot;TDB_operator_1&quot;</span>]  = <span class="st">&quot;D_z&quot;</span>
-constraint[<span class="st">&quot;TD_LB_1&quot;</span>]         = <span class="fl">0.0</span>
-constraint[<span class="st">&quot;TD_UB_1&quot;</span>]         = <span class="fl">1e6</span>
+
+<span class="co">#slope constraints (vertical)</span>
+m_min     = <span class="fl">0.0</span>
+m_max     = <span class="fl">1e6</span>
+set_type  = <span class="st">&quot;bounds&quot;</span>
+TD_OP     = <span class="st">&quot;D_z&quot;</span>
+app_mode  = (<span class="st">&quot;matrix&quot;</span>,<span class="st">&quot;&quot;</span>)
+custom_TD_OP = ([],false)
+push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
+
 
 options.parallel       = false
 (P_sub,TD_OP,set_Prop) = setup_constraints(constraint,comp_grid,options.FL)</code></pre>
@@ -349,8 +349,8 @@ MathJax.Hub.Config({
     }
 });
 </script>
-<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
-<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+<script src="https://slimgroup.slim.gatech.edu/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://slimgroup.slim.gatech.edu/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
 </div>
 </body>
 </html>

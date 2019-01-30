@@ -13,14 +13,14 @@
   <style type="text/css">code{white-space: pre;}</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.js"></script>
-  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+  <link rel="stylesheet" href="https://slimgroup.slim.gatech.edu/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
 </head>
 <body>
 <div class="scholmd-container">
 <div class="scholmd-main">
 <div class="scholmd-content">
 <h1 id="frequency-domain-full-waveform-inversion-fwi-with-constraints">Frequency domain Full-Waveform Inversion (FWI) with constraints</h1>
-<p><a href="../examples/constrained_freq_FWI_simple.jl">Julia script for this example</a></p>
+<p><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/constrained_freq_FWI_simple.jl">Julia script for this example</a></p>
 <p>Seismic full-waveform inversion (FWI) estimates rock properties (acoustic velocity in this example) from seismic signals (pressure) measured by hydrophones. FWI is a partial-differential-equation (PDE) constrained optimization problem where after eliminating the PDE constraint, the simulated data, <span class="math scholmd-math-inline">\(d_\text{predicted}(m) \in \mathbb{C}^M\)</span>, are connected nonlinearly to the unknown model parameters, <span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>. We assume that we know the source and receiver locations, as well as the source function. A classic example of an objective for FWI is the nonlinear least-squares misfit <span class="math scholmd-math-inline">\(f(m)=1/2 \| d_\text{obs} - d_\text{predicted}(m) \|_2^2\)</span>, which we use for this numerical experiment.</p>
 <p>FWI is a problem hampered by local minima. Empirical evidence suggests that we can mitigate issues with parasitic local minima by insisting that all model iterates be elements of the intersection of multiple constraint sets. This means that we add regularization to the objective <span class="math scholmd-math-inline">\(f(m) : \mathbb{R}^N \rightarrow \mathbb{R}\)</span> in the form of multiple constraints—i.e., we have 
 <span class="math scholmd-math-display" style="display: block;">\[
@@ -108,8 +108,8 @@ MathJax.Hub.Config({
     }
 });
 </script>
-<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
-<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+<script src="https://slimgroup.slim.gatech.edu/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://slimgroup.slim.gatech.edu/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
 </div>
 </body>
 </html>
