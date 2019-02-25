@@ -1,5 +1,11 @@
 #Performance of Projection Adaptive Relaxed Simultaneous Method of Multipliers (PARSDMM)
 
+Julia scripts for the examples on this page:\
+[Parallel Dykstra's algorithm vs PARSDMM](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/Dykstra_parallel_vs_PARSDMM.jl)\
+[2D grid size vs time scaling](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/test_scaling_2D.jl)\
+[3D grid size vs time scaling](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/test_scaling_3D.jl)
+
+
 To see how the proposed PARSDMM algorithm compares to parallel Dykstra's algorithm, we need to set up a fair experimental setting that includes the sub-problem solver in parallel Dykstra's algorithm. Fortunately, if we use Adaptive Relaxed ADMM (ARADMM) for the projection sub-problems of parallel Dykstra's algorithm, both PARSDMM and Parallel Dykstra-ARADMM have the same computational components. ARADMM also uses the same update scheme for the augmented Lagrangian penalty and relaxation parameters as we use in PARSDMM. This similarity allows for a comparison of the convergence as a function of the basic computational components. We manually tuned ARADMM stopping conditions to achieve the best performance for parallel Dykstra's algorithm overall.
  
 The numerical experiment is the projection of a 2D geological model (``341 \times 400`` pixels) onto the intersection of three constraint sets that are of interest to seismic imaging: 
@@ -57,7 +63,7 @@ We used the single-level version of PARSDMM such that we can compare the computa
 ### Some timings for 2D and 3D projections
 We show timings for projections of geological models onto two different intersections for the four modes of operation: PARSDMM, parallel PARSDMM, multilevel PARSDMM, and multilevel parallel PARSDMM. As we mentioned, the multilevel version has a small additional overhead compared to single-level PARSDMM because of one interpolation procedure per level. Parallel PARSDMM has communication overhead compared to serial PARSDMM. However, serial PARSDMM still uses multi-threading for projections, the matrix-vector product in the conjugate-gradient method, and BLAS operations, but the ``y_i`` and ``v_i`` computations in Algorithm #alg:PARSDMM remain sequential for every ``i=1,2,\cdots,p, p+1``, contrary to parallel PARSDMM. We carry our computations out on a dedicated cluster node with ``2`` CPUs per node with 10 cores per CPU (Intel Ivy Bridge 2.8 GHz E5-2680v2) and 128 GB of memory per node.
 
-The following sets are used to regularize a geophysical inverse problem and form the intersection for our first test case: 
+The following sets have been used to regularize geophysical inverse problems and form the intersection for our first test case: 
 
 1. ``\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}`` : bound constraints
 2. ``\{ m \: | \: -\sigma_3 \leq ((D_x \otimes I_z) m)[i] \leq \sigma_3 \}``: lateral smoothness constraints. There are two of these constraints in the 3D case: for the ``x`` and ``y`` direction separately.
@@ -71,17 +77,6 @@ The results in Figure #Fig:timings-1 show that the multilevel strategy is much f
 ![](images/projection_intersection_timings3D_1.png)
 : Timings for a 2D and 3D example where we project a geological model onto the intersection of bounds, lateral smoothness, and vertical monotonicity constraints.
 
-The previous example uses four constraint sets that each use a different linear operator, but all of them are a type of bound constraint. We now show an example where one of the sets uses a much more time-consuming projection computation than the other set, which leads to the expectation that parallel PARSDMM only offers minor speedups compared to serial PARSDMM. The second constraint set onto which we project is the intersection of:
-
-1. ``\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}`` : bound constraints
-2. ``\{ m \: | \: \|(I_x \otimes I_y \otimes D_z) m \|_1 \leq \sigma_3 \}``, with a constraint that is ``50\%`` of the true model: ``\sigma_3 = 0.5 \|(I_x \otimes I_y \otimes D_z) m_* \|_1`` : directional anisotropic total-variation
-
-Figures #Fig:timings-1 and #Fig:timings-2 show that parallel computations of the projections in PARSDMM is not always beneficial, depending on the number of constraint sets, model size, and time it takes to project onto each set.
-
-
-### Figure: timings-2 {#Fig:timings-2}
-![](images/projection_intersection_timings3D_1_b.png)
-: Timings for a 3D example where we project a geological model onto the intersection of bound constraints and an ``\ell_1``-norm constraint on the vertical derivative of the image. Parallel computation of the projections does not help in this case, because the ``\ell_1``-norm projection is much more time consuming than the projection onto the bound constraints. The time savings for other computations in parallel are then canceled out by the additional communication time.
 
 ```math_def
 \def\bb{\mathbf b}

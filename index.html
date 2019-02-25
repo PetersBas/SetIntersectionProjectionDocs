@@ -104,7 +104,7 @@ A_i x = y_i \\ Fx=y_{p+1}
 <li>serial part of code also uses multithreading and mulithreaded BLAS &amp; FFTW operations</li>
 <li>a build-in multilevel continuations drastically reduces computational times for many problems</li>
 <li>a build-in multilevel continuations empirically lead to better results for non-convex sets</li>
-<li>linear operators may be: SparseMatrixCSC, JOLI <a href="https://github.com/slimgroup/JOLI.jl" class="uri">https://github.com/slimgroup/JOLI.jl</a> DCT/DFT/Curvelet matrix-free operators</li>
+<li>linear operators may be: SparseMatrixCSC or <a href="https://github.com/slimgroup/JOLI.jl">JOLI</a> DCT/DFT/Curvelet matrix-free operators</li>
 <li>stores <code>AtA[i]=</code> <span class="math scholmd-math-inline">\(A_i^\top A_i\)</span> in compressed diagonal storage (CDS or DIA format) if all <span class="math scholmd-math-inline">\(A_i\)</span> have a banded structure. This saves memory compared to standard Julia <code>SparseMatrixCSC</code> format. We also use a multithreaded matrix-vector product which is faster than the Julia <code>SparseMatrixCSC</code> matrix-vector product</li>
 </ul>
 <h2 id="list-of-constraints-linear-operators">List of constraints &amp; linear operators</h2>
@@ -201,9 +201,14 @@ A_i x = y_i \\ Fx=y_{p+1}
 <td style="text-align: left;"></td>
 <td style="text-align: left;">“curvelet”</td>
 </tr>
+<tr class="odd">
+<td style="text-align: left;">wavelet transform</td>
+<td style="text-align: left;"></td>
+<td style="text-align: left;">“wavelet”</td>
+</tr>
 </tbody>
 </table></div>
-<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Table</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types <code>SparseMatrixCSC</code> or <code>JOLI</code> operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case.</span></figcaption></div>
+<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Table</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types <code>SparseMatrixCSC</code> or <code>JOLI</code> operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case. Curvelets require the separate installation of the <a href="http://curvelet.org/software.html">CurveLab</a> software.</span></figcaption></div>
 </figure>
 <h2 id="applications">Applications</h2>
 <ul>
@@ -217,13 +222,14 @@ A_i x = y_i \\ Fx=y_{p+1}
 <h2 id="performance">Performance</h2>
 <ul>
 <li><a href="docs/README_PARSDMM_performance.html">timings for projections of 2D and 3D models vs grid size and computational cost of parallel Dykstra vs PARSDMM</a></li>
-<li><a href="docs/MVPs.html">timings Julia 0.6 SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec</a></li>
+<li><a href="docs/MVPs.html">timings Julia SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec</a></li>
 </ul>
 <h2 id="a-first-example">A first example</h2>
 <p>The following example illustrates the basic usage. We will project an image onto a set that is the intersection of bound constraint, vertical monotonicity (slope-constraints) and horizontal smoothness (another type of slope-constraint). This is a serial (single-level) example. Use parallel and or multi-level version for larger problems. An extended tutorial can be found <a href="docs/README_Tutorial.html">here</a></p>
-<pre class="sourceCode julia"><code class="sourceCode julia">using SetIntersectionProjection
+<pre class="sourceCode julia"><code class="sourceCode julia">using Distributed
+@everywhere using SetIntersectionProjection
 using MAT
-using PyPlot
+using LinearAlgebra
 
 mutable struct compgrid
   d :: <span class="dt">Tuple</span>
@@ -237,17 +243,15 @@ options.FL = <span class="dt">Float32</span>
 <span class="co">#select working precision</span>
 <span class="kw">if</span> options.FL==<span class="dt">Float64</span>
   TF = <span class="dt">Float64</span>
-  TI = <span class="dt">Int64</span>
 <span class="kw">elseif</span> options.FL==<span class="dt">Float32</span>
   TF = <span class="dt">Float32</span>
-  TI = <span class="dt">Int32</span>
 <span class="kw">end</span>
 
 <span class="co">#load image to project</span>
-file = matopen(<span class="st">&quot;compass_velocity.mat&quot;</span>)
-m    = read(file, <span class="st">&quot;Data&quot;</span>); close(file)
+file = matopen(joinpath(dirname(pathof(SetIntersectionProjection)), <span class="st">&quot;../examples/Data/compass_velocity.mat&quot;</span>))
+m    = read(file, <span class="st">&quot;Data&quot;</span>);close(file)
 m    = m[<span class="fl">1</span>:<span class="fl">341</span>,<span class="fl">200</span>:<span class="fl">600</span>]
-m    = m&#39;
+m    = permutedims(m,[<span class="fl">2</span>,<span class="fl">1</span>])
 
 <span class="co">#set up computational grid (25 and 6 m are the original distances between grid points)</span>
 comp_grid = compgrid((TF(<span class="fl">25.0</span>), TF(<span class="fl">6.0</span>)),(size(m,<span class="fl">1</span>), size(m,<span class="fl">2</span>)))
@@ -289,8 +293,12 @@ zmax = comp_grid.d[<span class="fl">2</span>]*comp_grid.n[<span class="fl">2</sp
 vmi  = <span class="fl">1500.0</span>
 vma  = <span class="fl">4500.0</span>
 
-figure();imshow(reshape(m,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;model to project&quot;</span>)
-figure();imshow(reshape(x,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;Projection (bounds and bounds on D_z)&quot;</span>)
+ENV[<span class="st">&quot;MPLBACKEND&quot;</span>]=<span class="st">&quot;qt5agg&quot;</span>
+using PyPlot
+
+figure();imshow(permutedims(reshape(m,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>])),[<span class="fl">2</span>,<span class="fl">1</span>]),cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;model to project&quot;</span>)
+figure();imshow(permutedims(reshape(x,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>])),[<span class="fl">2</span>,<span class="fl">1</span>]),cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;Projection (bounds and bounds on D_z)&quot;</span>)
+
 
 <span class="co">#plot PARSDMM logs</span>
 figure();

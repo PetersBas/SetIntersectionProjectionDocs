@@ -13,7 +13,7 @@
   <style type="text/css">code{white-space: pre;}</style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.7.1/modernizr.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.js"></script>
-  <link rel="stylesheet" href="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
+  <link rel="stylesheet" href="https://slimgroup.slim.gatech.edu/ScholMD/standalone/slimweb-scholmd-standalone-v0.1-latest.min.css">
 </head>
 <body>
 <div class="scholmd-container">
@@ -41,6 +41,7 @@
 \]</div>
 <div class="scholmd-content">
 <h1 id="performance-of-projection-adaptive-relaxed-simultaneous-method-of-multipliers-parsdmm">Performance of Projection Adaptive Relaxed Simultaneous Method of Multipliers (PARSDMM)</h1>
+<p>Julia scripts for the examples on this page:<br /><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/Dykstra_parallel_vs_PARSDMM.jl">Parallel Dykstra’s algorithm vs PARSDMM</a><br /><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/test_scaling_2D.jl">2D grid size vs time scaling</a><br /><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/test_scaling_3D.jl">3D grid size vs time scaling</a></p>
 <p>To see how the proposed PARSDMM algorithm compares to parallel Dykstra’s algorithm, we need to set up a fair experimental setting that includes the sub-problem solver in parallel Dykstra’s algorithm. Fortunately, if we use Adaptive Relaxed ADMM (ARADMM) for the projection sub-problems of parallel Dykstra’s algorithm, both PARSDMM and Parallel Dykstra-ARADMM have the same computational components. ARADMM also uses the same update scheme for the augmented Lagrangian penalty and relaxation parameters as we use in PARSDMM. This similarity allows for a comparison of the convergence as a function of the basic computational components. We manually tuned ARADMM stopping conditions to achieve the best performance for parallel Dykstra’s algorithm overall.</p>
 <p>The numerical experiment is the projection of a 2D geological model (<span class="math scholmd-math-inline">\(341 \times 400\)</span> pixels) onto the intersection of three constraint sets that are of interest to seismic imaging:</p>
 <ol type="1">
@@ -106,7 +107,7 @@ r^\text{evol} = \frac{ \text{max}_{j \in S} \{ \|x^k - x^{k-j}\| \} }{ \|x^k\| }
 <p>We used the single-level version of PARSDMM such that we can compare the computational cost with Parallel Dykstra. The PARSDMM results in this section are therefore pessimistic in general, as the multilevel version can offer additional speedups, which we show next.</p>
 <h3 id="some-timings-for-2d-and-3d-projections">Some timings for 2D and 3D projections</h3>
 <p>We show timings for projections of geological models onto two different intersections for the four modes of operation: PARSDMM, parallel PARSDMM, multilevel PARSDMM, and multilevel parallel PARSDMM. As we mentioned, the multilevel version has a small additional overhead compared to single-level PARSDMM because of one interpolation procedure per level. Parallel PARSDMM has communication overhead compared to serial PARSDMM. However, serial PARSDMM still uses multi-threading for projections, the matrix-vector product in the conjugate-gradient method, and BLAS operations, but the <span class="math scholmd-math-inline">\(y_i\)</span> and <span class="math scholmd-math-inline">\(v_i\)</span> computations in Algorithm #alg:PARSDMM remain sequential for every <span class="math scholmd-math-inline">\(i=1,2,\cdots,p, p+1\)</span>, contrary to parallel PARSDMM. We carry our computations out on a dedicated cluster node with <span class="math scholmd-math-inline">\(2\)</span> CPUs per node with 10 cores per CPU (Intel Ivy Bridge 2.8 GHz E5-2680v2) and 128 GB of memory per node.</p>
-<p>The following sets are used to regularize a geophysical inverse problem and form the intersection for our first test case:</p>
+<p>The following sets have been used to regularize geophysical inverse problems and form the intersection for our first test case:</p>
 <ol type="1">
 <li><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}\)</span> : bound constraints</li>
 <li><span class="math scholmd-math-inline">\(\{ m \: | \: -\sigma_3 \leq ((D_x \otimes I_z) m)[i] \leq \sigma_3 \}\)</span>: lateral smoothness constraints. There are two of these constraints in the 3D case: for the <span class="math scholmd-math-inline">\(x\)</span> and <span class="math scholmd-math-inline">\(y\)</span> direction separately.</li>
@@ -121,18 +122,7 @@ r^\text{evol} = \frac{ \text{max}_{j \in S} \{ \|x^k - x^{k-j}\| \} }{ \|x^k\| }
 </figure></div>
 <div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">3</span></span><span class="scholmd-caption-text">Timings for a 2D and 3D example where we project a geological model onto the intersection of bounds, lateral smoothness, and vertical monotonicity constraints.</span></figcaption></div>
 </figure>
-<p>The previous example uses four constraint sets that each use a different linear operator, but all of them are a type of bound constraint. We now show an example where one of the sets uses a much more time-consuming projection computation than the other set, which leads to the expectation that parallel PARSDMM only offers minor speedups compared to serial PARSDMM. The second constraint set onto which we project is the intersection of:</p>
-<ol type="1">
-<li><span class="math scholmd-math-inline">\(\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}\)</span> : bound constraints</li>
-<li><span class="math scholmd-math-inline">\(\{ m \: | \: \|(I_x \otimes I_y \otimes D_z) m \|_1 \leq \sigma_3 \}\)</span>, with a constraint that is <span class="math scholmd-math-inline">\(50\%\)</span> of the true model: <span class="math scholmd-math-inline">\(\sigma_3 = 0.5 \|(I_x \otimes I_y \otimes D_z) m_* \|_1\)</span> : directional anisotropic total-variation</li>
-</ol>
-<p>Figures <span class="scholmd-crossref"><a href="#Fig:timings-1">3</a></span> and <span class="scholmd-crossref"><a href="#Fig:timings-2">4</a></span> show that parallel computations of the projections in PARSDMM is not always beneficial, depending on the number of constraint sets, model size, and time it takes to project onto each set.</p>
-<figure class="scholmd-float scholmd-figure" id="Fig:timings-2">
-<div class="scholmd-float-content"><figure class="scholmd-subfig" style="display: inline-block; width: ">
-<img src="images/projection_intersection_timings3D_1_b.png" />
-</figure></div>
-<div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Figure</span><span class="scholmd-caption-head-label">4</span></span><span class="scholmd-caption-text">Timings for a 3D example where we project a geological model onto the intersection of bound constraints and an <span class="math scholmd-math-inline">\(\ell_1\)</span>-norm constraint on the vertical derivative of the image. Parallel computation of the projections does not help in this case, because the <span class="math scholmd-math-inline">\(\ell_1\)</span>-norm projection is much more time consuming than the projection onto the bound constraints. The time savings for other computations in parallel are then canceled out by the additional communication time.</span></figcaption></div>
-</figure>
+<p></p>
 <div class="references">
 
 </div>
@@ -165,8 +155,8 @@ MathJax.Hub.Config({
     }
 });
 </script>
-<script src="https://www.slim.eos.ubc.ca/Publications/Resources/ScholMD/js/slimweb-scholmd-scripts.js"></script>
-<script src="https://www.slim.eos.ubc.ca/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
+<script src="https://slimgroup.slim.gatech.edu/ScholMD/js/slimweb-scholmd-scripts.js"></script>
+<script src="https://slimgroup.slim.gatech.edu/MathJax/MathJax.js?config=TeX-AMS_HTML-full" type="text/javascript"></script>
 </div>
 </body>
 </html>

@@ -41,15 +41,20 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <h1 id="tutorial-example">Tutorial example</h1>
 <p><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/projection_intersection_2D.jl">Julia script for this example</a></p>
 <p>We show how we can compute projections onto an intersection of multiple sets using PARSDMM, parallel PARSDMM, multilevel PARSDMM and multilevel parallel PARSDMM.</p>
-<pre class="sourceCode julia"><code class="sourceCode julia">@everywhere using SetIntersectionProjection
+<pre class="sourceCode julia"><code class="sourceCode julia">using Distributed
+@everywhere using SetIntersectionProjection
+
+using MAT
+using LinearAlgebra
+ENV[<span class="st">&quot;MPLBACKEND&quot;</span>]=<span class="st">&quot;qt5agg&quot;</span> <span class="co">#select pyplot backend</span>
 using PyPlot <span class="co">#optional, for plotting only</span>
 
 mutable struct compgrid <span class="co">#define a computational grid information type</span>
-  d :: <span class="dt">Tuple</span>
-  n :: <span class="dt">Tuple</span>
+  d :: <span class="dt">Tuple</span> <span class="co">#spacing between grid points in each direction</span>
+  n :: <span class="dt">Tuple</span> <span class="co">#number of grid points in each direction</span>
 <span class="kw">end</span></code></pre>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#PARSDMM options:</span>
-options    = PARSDMM_options() <span class="co">#fill all options with defaults</span>
+options    = PARSDMM_options() <span class="co">#get and fill all options with defaults</span>
 options.FL = <span class="dt">Float32</span> 
 
 <span class="co">#other options include</span>
@@ -72,23 +77,23 @@ options.FL = <span class="dt">Float32</span>
 <pre><code>#select working precision
 if options.FL==Float64
   TF = Float64
-  TI = Int64
 elseif options.FL==Float32
   TF = Float32
-  TI = Int32
 end</code></pre>
-<p>Set other performance related items that are not <code>SetIntersectionProjection</code> options. <code>SetIntersectionProjection</code> solution times will be affected by these. Do not forget to set <code>export JULIA_NUM_THREADS=2</code> or any other number of Julia threads that you want to use. In Julia you can check how many Julia threads will be used using the command <code>Threads.nthreads()</code> .</p>
+<p>Set other performance related items that are not <code>SetIntersectionProjection</code> options. <code>SetIntersectionProjection</code> solution times will be affected by these. Do not forget to set <code>export JULIA_NUM_THREADS=2</code> or any other number of Julia threads that you want to use before starting Julia. In Julia you can check how many Julia threads will be used using the command <code>Threads.nthreads()</code> .</p>
 <pre class="sourceCode julia"><code class="sourceCode julia">set_zero_subnormals(true)
-BLAS.set_num_threads(<span class="fl">2</span>)
-FFTW.set_num_threads(<span class="fl">2</span>)</code></pre>
+BLAS.set_num_threads(<span class="fl">2</span>)</code></pre>
 <p>Load an image or model that we want to projection onto the intersection.</p>
-<pre class="sourceCode julia"><code class="sourceCode julia">m = randn(<span class="fl">300</span>,<span class="fl">400</span>) <span class="co">#load image to project</span>
+<pre class="sourceCode julia"><code class="sourceCode julia">file = matopen(joinpath(dirname(pathof(SetIntersectionProjection)), <span class="st">&quot;../examples/Data/compass_velocity.mat&quot;</span>))
+m    = read(file, <span class="st">&quot;Data&quot;</span>);close(file)
+m    = m[<span class="fl">1</span>:<span class="fl">341</span>,<span class="fl">200</span>:<span class="fl">600</span>]
+m    = permutedims(m,[<span class="fl">2</span>,<span class="fl">1</span>])
 
 <span class="co">#set up computational grid (25 and 6 m are the original distances between grid points)</span>
-comp_grid = compgrid((TF(<span class="fl">25.0</span>), TF(<span class="fl">6.0</span>)),(size(m,<span class="fl">1</span>), size(m,<span class="fl">2</span>))) <span class="co">#set up as compgrid( (dx,dy,dz) , (nx,ny,nz) )</span>
+comp_grid = compgrid((TF(<span class="fl">25.0</span>), TF(<span class="fl">6.0</span>)),(size(m,<span class="fl">1</span>), size(m,<span class="fl">2</span>))) <span class="co">#set up as compgrid( (dx,dz) , (nx,nz) ) in 2D, in 3D use compgrid( (dx, dy, dz) , (nx, ny, nz) )</span>
 <span class="co">#use as comp_grid.n and comp_grid.d</span>
 
-m = convert(<span class="dt">Vector</span>{TF},vec(m)) <span class="co">#PARSDMM needs the 2D/2D model as a vector, also in the right precision</span></code></pre>
+m = convert(<span class="dt">Vector</span>{TF},vec(m)) <span class="co">#PARSDMM needs the 2D/3D model as a vector, also convert to the desired precision</span></code></pre>
 <p>We are ready to select the constraints that we want to use. The following block of code sets up and generates the linear operators and projectors onto each set separately. This part is optional, you can also use your own scripts to generate pairs of linear operators and projectors.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#constraints</span>
 constraint = <span class="dt">Vector</span>{SetIntersectionProjection.set_definitions}() <span class="co">#Initialize constraint information</span>
@@ -102,7 +107,6 @@ app_mode  = (<span class="st">&quot;matrix&quot;</span>,<span class="st">&quot;&
 custom_TD_OP = ([],false)
 push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_OP))
 
-
 <span class="co">#slope constraints (vertical)</span>
 m_min     = <span class="fl">0.0</span> <span class="co">#transform-domain lower bound (may be a vector for bound constraints)</span>
 m_max     = <span class="fl">1e6</span> <span class="co">#transform-domain upper bound (may be a vector for bound constraints)</span>
@@ -115,15 +119,14 @@ push!(constraint, set_definitions(set_type,TD_OP,m_min,m_max,app_mode,custom_TD_
 
 options.parallel       = false <span class="co">#indicate we are working in serial (1 Julia worker, but still use multi-threading)</span>
 
-
 (P_sub,TD_OP,set_Prop) = setup_constraints(constraint,comp_grid,options.FL)              <span class="co">#get projectors onto simple sets, linear operators, set information</span>
 (TD_OP,AtA,l,y)        = PARSDMM_precompute_distribute(TD_OP,set_Prop,comp_grid,options) <span class="co">#precompute and distribute quantities once, reuse later</span></code></pre>
-<p>Some properties of each set are stored in <code>set_Prop</code>. For example, we can see if set number 2 is non-convex using <code>set_Prop.ncvx[2]</code>. To see what set number 2 is, as generated by our scripts above, we can use <code>set_Prop.tag[2]</code>, which returns a tuple of (set description, linear operator description).</p>
+<p>Some properties of each set are stored in <code>set_Prop</code>. For example, we can see if set number 2 is non-convex using <code>set_Prop.ncvx[2]</code>. To see what set number 2 is, as generated by our scripts above, we can use <code>set_Prop.tag[2]</code>, which returns a tuple of (constraint type, linear operator description, application mode, application direction if applicable).</p>
 <pre class="sourceCode julia"><code class="sourceCode julia">           ncvx       ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is the set non-convex? (true/false)</span>
            AtA_diag   ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is A^T A a diagonal matrix?</span>
            dense      ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is A a dense matrix?</span>
            TD_n       ::<span class="dt">Vector</span>{<span class="dt">Tuple</span>}                                         <span class="co">#the grid dimensions in the transform-domain.</span>
-           tag        ::<span class="dt">Vector</span>{<span class="dt">Tuple</span>{<span class="dt">String</span>,<span class="dt">String</span>}}                          <span class="co">#(constraint type, linear operator description)</span>
+           tag        ::<span class="dt">Vector</span>{<span class="dt">Tuple</span>{<span class="dt">String</span>,<span class="dt">String</span>,<span class="dt">String</span>,<span class="dt">String</span>}}            <span class="co">#(constraint type, linear operator description, application mode,application direction if applicable)</span>
            banded     ::<span class="dt">Vector</span>{<span class="dt">Bool</span>}                                          <span class="co">#is A a banded matrix?</span>
            AtA_offsets::<span class="dt">Union</span>{<span class="dt">Vector</span>{<span class="dt">Vector</span>{<span class="dt">Int32</span>}},<span class="dt">Vector</span>{<span class="dt">Vector</span>{<span class="dt">Int64</span>}}}    <span class="co">#only required if A is banded. A vector of indices of the non-zero diagonals, where the main diagonal is index 0</span></code></pre>
 <p>We are ready to solve the projection problem, using the projectors and linear operators generated as above, or using your own.</p>
@@ -138,9 +141,9 @@ vmi  = <span class="fl">1500</span>
 vma  = <span class="fl">4500</span>
 
 <span class="co">#project original model and the one that is projected onto the intersection</span>
-figure();imshow(reshape(m,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;model to project&quot;</span>)
+figure();imshow(permutedims(reshape(m,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>])),[<span class="fl">2</span>,<span class="fl">1</span>]),cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;model to project&quot;</span>)
 savefig(<span class="st">&quot;original_model.png&quot;</span>,bbox_inches=<span class="st">&quot;tight&quot;</span>)
-figure();imshow(reshape(x,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>]))&#39;,cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;Projection (bounds and bounds on D_z)&quot;</span>)
+figure();imshow(permutedims(reshape(x,(comp_grid.n[<span class="fl">1</span>],comp_grid.n[<span class="fl">2</span>])),[<span class="fl">2</span>,<span class="fl">1</span>]),cmap=<span class="st">&quot;jet&quot;</span>,vmin=vmi,vmax=vma,extent=[<span class="fl">0</span>,  xmax, zmax, <span class="fl">0</span>]); title(<span class="st">&quot;Projection (bounds and bounds on D_z)&quot;</span>)
 savefig(<span class="st">&quot;projected_model.png&quot;</span>,bbox_inches=<span class="st">&quot;tight&quot;</span>)
 
 
@@ -158,9 +161,8 @@ subplot(<span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">9
 tight_layout()
 <span class="co">#tight_layout(pad=0.0, w_pad=0.0, h_pad=1.0)</span>
 savefig(<span class="st">&quot;PARSDMM_logs.png&quot;</span>,bbox_inches=<span class="st">&quot;tight&quot;</span>)</code></pre>
-<p>Now we project onto the same intersection, but we solve the sub-problems in parallel. This means we compute the <span class="math scholmd-math-inline">\(y_i\)</span>-minimization (proximal maps), <span class="math scholmd-math-inline">\(v_i\)</span>-update (Lagrangian multipliers), <span class="math scholmd-math-inline">\(\rho_i\)</span> (augmented-Lagrangian penalty parameters), and <span class="math scholmd-math-inline">\(\gamma_i\)</span> (relaxation parameters) on different <code>Julia</code> workers for each index <span class="math scholmd-math-inline">\(i\)</span>.</p>
 <h1 id="parallel-parsdmm">Parallel PARSDMM</h1>
-<p>To activate this type of parallelism, we only need to set one flag (<code>options.parallel = true</code>):</p>
+<p>Now we project onto the same intersection, but we solve the sub-problems in parallel. This means we compute the <span class="math scholmd-math-inline">\(y_i\)</span>-minimization (proximal maps), <span class="math scholmd-math-inline">\(v_i\)</span>-update (Lagrangian multipliers), <span class="math scholmd-math-inline">\(\rho_i\)</span> (augmented-Lagrangian penalty parameters), and <span class="math scholmd-math-inline">\(\gamma_i\)</span> (relaxation parameters) on different <code>Julia</code> workers for each index <span class="math scholmd-math-inline">\(i\)</span>. To activate this type of parallelism, we need to start Julia as <code>Julia -p 4</code>. The only change to the code is to set the flag (<code>options.parallel = true</code>):</p>
 <pre class="sourceCode julia"><code class="sourceCode julia">options.parallel       = true
 
 <span class="co">#if we change to parallel computions, we need to repeat the precomputations and distribution</span>
@@ -170,26 +172,26 @@ savefig(<span class="st">&quot;PARSDMM_logs.png&quot;</span>,bbox_inches=<span c
 @time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);
 @time (x,log_PARSDMM) = PARSDMM(m,AtA,TD_OP,set_Prop,P_sub,comp_grid,options);</code></pre>
 <h1 id="multilevel-serial-parsdmm">Multilevel Serial PARSDMM</h1>
-<p>First we need to decide on the number of levels and the coarsening factor.</p>
+<p>Multilevel serial PARSDMM computes the projection onto an intersection starting on a coarsened grid. The result is then used as initial guess for a finer grid. Serial PARSDMM computes the PARSDMM sub-problems on each level in serial using a single Julia worker (still multi-threaded). First we need to decide on the number of levels and the coarsening factor.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia">options.parallel = false
 
 <span class="co">#2 levels, the gird point spacing at level 2 is 3X that of the original (level 1) grid</span>
 n_levels          = <span class="fl">2</span> <span class="co">#integer</span>
-coarsening_factor = <span class="fl">3</span> <span class="co">#float</span></code></pre>
-<p>The multilevel version of PARSDMM has a slightly different setup. What we did before as part of <code>PARSDMM_precompute_distribute</code>, is now included as part of <code>setup_multi_level_PARSDMM</code>. The quantity <code>TD_OP_levels</code> is a vector of vectors of linear operators. Access linear operator number <span class="math scholmd-math-inline">\(1\)</span> on level <span class="math scholmd-math-inline">\(2\)</span> as <code>TD_OP_levels = TD_OP[2][1]</code>, so the first index refers to the level.</p>
+coarsening_factor = <span class="fl">3.0</span> <span class="co">#float</span></code></pre>
+<p>The multilevel version of PARSDMM has a slightly different setup. What we did before as part of <code>PARSDMM_precompute_distribute</code>, is now included as part of <code>setup_multi_level_PARSDMM</code>. The quantity <code>TD_OP_levels</code> is a vector of vectors of linear operators. Access linear operator number <span class="math scholmd-math-inline">\(1\)</span> on level <span class="math scholmd-math-inline">\(2\)</span> as <code>TD_OP_levels = TD_OP[2][1]</code>, so the first index refers to the level. The script <code>setup_multi_level_PARSDMM</code> sets up all linear operators, proximal maps and projectors on each grid in advance, such that we can reuse it if we project many times onto the same intersections, as we would do if PARSDMM serves as the projection part of the projected-gradient algorithm.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#set up all required quantities for each level</span>
 (TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels) = setup_multi_level_PARSDMM(m,n_levels,coarsening_factor,comp_grid,constraint,options)
 
 @time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);
 @time (x,log_PARSDMM) = PARSDMM_multi_level(m,TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels,options);</code></pre>
 <h1 id="multilevel-parallel-parsdmm">Multilevel Parallel PARSDMM</h1>
-<p>The only difference from serial multilevel PARSDMM is the flag <code>options.parallel = true</code>.</p>
+<p>The only difference from multilevel serial PARSDMM is the flag <code>options.parallel = true</code>. This options will solve the PARSDMM sub-problems on each grid on multiple Julia workers.</p>
 <pre class="sourceCode julia"><code class="sourceCode julia"><span class="co">#now use multi-level with parallel PARSDMM</span>
 options.parallel = true
 
 <span class="co">#2 levels, the gird point spacing at level 2 is 3X that of the original (level 1) grid</span>
-n_levels=<span class="fl">2</span>
-coarsening_factor=<span class="fl">3</span>
+n_levels          = <span class="fl">2</span>
+coarsening_factor = <span class="fl">3.0</span>
 
 <span class="co">#set up all required quantities for each level</span>
 (TD_OP_levels,AtA_levels,P_sub_levels,set_Prop_levels,comp_grid_levels) = setup_multi_level_PARSDMM(m,n_levels,coarsening_factor,comp_grid,constraint,options)

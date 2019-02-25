@@ -19,14 +19,14 @@ The applications of interest for this example are linear inverse problems, such 
 For both of the examples we observe the following constraint parameters from exemplar images:
  
 1. ``\{ m \: | \: \sigma_1 \leq m[i] \leq \sigma_2 \}`` (upper and lower bounds)
-2. ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma_3 \}`` with ``m = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )`` is the SVD of the image (nuclear norm)
-3. ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma_4 \}``, with ``(I_x \otimes D_z)m = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )`` is the SVD of the vertical derivative of the image (nuclear norm of discrete gradients of the image, total-nuclear-variation). Use the same for the x-direction.
-4. ``\{ m \: | \: \| A m \|_1 \leq \sigma_5 \}`` with ``A = ((I_x \otimes D_z)^\top \: (D_x \otimes I_z)^\top)^\top`` (anisotropic total-variation) 
+2. ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma_3 \}`` with ``m = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^\top )`` is the SVD of the image (nuclear norm)
+3. ``\{ m \: | \: \sum_{j=1}^k \lambda[j] \leq \sigma_4 \}``, with ``(D_z \otimes I_x)m = \operatorname{vec}( \sum_{j=1}^{k}\lambda[j] u_j v_j^* )`` is the SVD of the vertical derivative of the image (nuclear norm of discrete gradients of the image, total-nuclear-variation). Use similar constraint for the x-direction.
+4. ``\{ m \: | \: \| A m \|_1 \leq \sigma_5 \}`` with ``A = \begin{pmatrix} D_z \otimes I_x \\ I_z \otimes D_x \end{pmatrix}`` (anisotropic total-variation) 
 5. ``\{ m \: | \: \sigma_6 \leq \| m \|_2 \leq \sigma_7 \}`` (annulus)
-6.  ``\{ m \: | \: \sigma_8 \leq \| A m \|_2 \leq \sigma_9 \}`` with ``A = ((I_x \otimes D_z)^\top \: (D_x \otimes I_z)^\top)^\top`` (annulus of the discrete gradients of the training images)
+6. ``\{ m \: | \: \sigma_8 \leq \| A m \|_2 \leq \sigma_9 \}`` with ``A = \begin{pmatrix} D_z \otimes I_x \\ I_z \otimes D_x \end{pmatrix}`` (annulus of the discrete gradients of the training images)
 7. ``\{ m \: | \: \| A m \|_1 \leq \sigma_{10} \}`` with ``A = `` discrete Fourier transform (``\ell_1``-norm of DFT coefficients) 
-8. ``\{ m \: | \: - \sigma_{11} \leq ((D_x \otimes I_z) m)[i] \leq \sigma_{12} \}`` (slope-constraints in x and z direction, bounds on the discrete gradients of the image)
-9. ``\{ m \: | \: l[i] \leq (A m)[i] \leq u[i] \}``, with ``A=`` discrete cosine transform (point-wise bound-constraints on DCT coefficients) 
+8. ``\{ m \: | \: - \sigma_{11} \leq ((D_z \otimes I_x) m)[i] \leq \sigma_{12} \}`` (slope-constraints in the ``z``-direction, bounds on the discrete gradients of the image). Use similar constraint for the ``x``-direction.
+9. ``\{ m \: | \: \| A m \|_1 \leq \sigma_{11} \}`` with ``A = `` discrete wavelet transform 
 
 
 These are nine types of convex and non-convex constraints on the model properties (``11`` sets passed to PARSDMM because sets three and eight are applied to the two dimensions separately). For data-fitting, we add a point-wise constraint, ``\{ x \: | \: l \leq (F x - d_\text{obs}) \leq u \}`` with a linear forward model ``F \in \mathbb{R}^{M \times N}``.

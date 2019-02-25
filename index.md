@@ -47,7 +47,7 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
 - serial part of code also uses multithreading and mulithreaded BLAS & FFTW operations
 - a build-in multilevel continuations drastically reduces computational times for many problems
 - a build-in multilevel continuations empirically lead to better results for non-convex sets
-- linear operators may be: SparseMatrixCSC, JOLI [https://github.com/slimgroup/JOLI.jl](https://github.com/slimgroup/JOLI.jl) DCT/DFT/Curvelet matrix-free operators
+- linear operators may be: SparseMatrixCSC or [JOLI](https://github.com/slimgroup/JOLI.jl) DCT/DFT/Curvelet matrix-free operators
 - stores `AtA[i]=` ``A_i^\top A_i`` in compressed diagonal storage (CDS or DIA format) if all ``A_i`` have a banded structure. This saves memory compared to standard Julia `SparseMatrixCSC` format. We also use a multithreaded matrix-vector product which is faster than the Julia `SparseMatrixCSC` matrix-vector product
 
 ## List of constraints & linear operators
@@ -78,8 +78,9 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
 | discrete cosine transform | | "DCT" |
 | discrete Fourier transform | | "DFT" |
 | curvelet transform | | "curvelet" |
+| wavelet transform | | "wavelet" |
 
-: Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types `SparseMatrixCSC` or `JOLI` operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case.
+: Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types `SparseMatrixCSC` or `JOLI` operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case. Curvelets require the separate installation of the [CurveLab](http://curvelet.org/software.html) software.
 
 ## Applications
 
@@ -92,7 +93,7 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
 ## Performance
 
  - [timings for projections of 2D and 3D models vs grid size and computational cost of parallel Dykstra vs PARSDMM](docs/README_PARSDMM_performance.html)
- - [timings Julia 0.6 SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec](docs/MVPs.html)
+ - [timings Julia SparseMatrixCSC mat-vec vs our multi-threaded compressed-diagonal mat-vec](docs/MVPs.html)
  
  
 ## A first example
@@ -100,9 +101,10 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
 The following example illustrates the basic usage. We will project an image onto a set that is the intersection of bound constraint, vertical monotonicity (slope-constraints) and horizontal smoothness (another type of slope-constraint). This is a serial (single-level) example. Use parallel and or multi-level version for larger problems. An extended tutorial can be found [here](docs/README_Tutorial.html)
 
 ```julia
-using SetIntersectionProjection
+using Distributed
+@everywhere using SetIntersectionProjection
 using MAT
-using PyPlot
+using LinearAlgebra
 
 mutable struct compgrid
   d :: Tuple
@@ -116,17 +118,15 @@ options.FL = Float32
 #select working precision
 if options.FL==Float64
   TF = Float64
-  TI = Int64
 elseif options.FL==Float32
   TF = Float32
-  TI = Int32
 end
 
 #load image to project
-file = matopen("compass_velocity.mat")
-m    = read(file, "Data"); close(file)
+file = matopen(joinpath(dirname(pathof(SetIntersectionProjection)), "../examples/Data/compass_velocity.mat"))
+m    = read(file, "Data");close(file)
 m    = m[1:341,200:600]
-m    = m'
+m    = permutedims(m,[2,1])
 
 #set up computational grid (25 and 6 m are the original distances between grid points)
 comp_grid = compgrid((TF(25.0), TF(6.0)),(size(m,1), size(m,2)))
@@ -180,8 +180,12 @@ zmax = comp_grid.d[2]*comp_grid.n[2]
 vmi  = 1500.0
 vma  = 4500.0
 
-figure();imshow(reshape(m,(comp_grid.n[1],comp_grid.n[2]))',cmap="jet",vmin=vmi,vmax=vma,extent=[0,  xmax, zmax, 0]); title("model to project")
-figure();imshow(reshape(x,(comp_grid.n[1],comp_grid.n[2]))',cmap="jet",vmin=vmi,vmax=vma,extent=[0,  xmax, zmax, 0]); title("Projection (bounds and bounds on D_z)")
+ENV["MPLBACKEND"]="qt5agg"
+using PyPlot
+
+figure();imshow(permutedims(reshape(m,(comp_grid.n[1],comp_grid.n[2])),[2,1]),cmap="jet",vmin=vmi,vmax=vma,extent=[0,  xmax, zmax, 0]); title("model to project")
+figure();imshow(permutedims(reshape(x,(comp_grid.n[1],comp_grid.n[2])),[2,1]),cmap="jet",vmin=vmi,vmax=vma,extent=[0,  xmax, zmax, 0]); title("Projection (bounds and bounds on D_z)")
+
 
 #plot PARSDMM logs
 figure();
