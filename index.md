@@ -9,6 +9,8 @@ classoption:
     - paper
 ---
 
+##[Preprint paper](https://arxiv.org/abs/1902.09699)
+
 **SetIntersectionProjection** is a **Julia** package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (``m \in \mathbb{R}^N``) onto intersections of ``p`` convex and non-convex sets:
 
 ```math
