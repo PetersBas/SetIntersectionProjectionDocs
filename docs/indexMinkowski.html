@@ -47,6 +47,7 @@
 </div>
 </header>
 <h2 id="preprint-paper-available-online-soon">[Preprint paper available online soon]</h2>
+<h2 id="code-on-github-merged-with-setintersectionprojection"><a href="https://github.com/slimgroup/SetIntersectionProjection.jl">Code on github merged with SetIntersectionProjection</a></h2>
 <p>This is the documentation main page corresponding to the <strong>Julia 1.1</strong> software developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (<span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>) onto a generalization of the Minkowski set: 
 <span class="math scholmd-math-display" style="display: block;">\[
 \begin{equation*}
@@ -75,6 +76,12 @@ x \in \mathcal{G}^{\text{data}}
 \end{equation*}
 \]</span>
 </li>
+</ul>
+<h2 id="applications">Applications</h2>
+<ul>
+<li><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/Minkowski_video_decomposition.jl">Generalized Minkowski decomposition of a video</a></li>
+<li><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/example_2D_Minkowski_projection.jl">Generalized Minkowski projection and decompositions of a geological model</a></li>
+<li>[Seismic full-waveform inversion with generalized Minkowski constraints (coming soon)]</li>
 </ul>
 <h2 id="computational-features">Computational features</h2>
 <ul>
@@ -188,12 +195,6 @@ x \in \mathcal{G}^{\text{data}}
 </table></div>
 <div class="scholmd-float-caption"><figcaption><span class="scholmd-caption-head"><span class="scholmd-caption-head-prefix">Table</span><span class="scholmd-caption-head-label">2</span></span><span class="scholmd-caption-text">Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types <code>SparseMatrixCSC</code> or <code>JOLI</code> operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case. Curvelets require the separate installation of the <a href="http://curvelet.org/software.html">CurveLab</a> software.</span></figcaption></div>
 </figure>
-<h2 id="applications">Applications</h2>
-<ul>
-<li><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/Minkowski_video_decomposition.jl">Generalized Minkowski decomposition of a video</a></li>
-<li><a href="https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/example_2D_Minkowski_projection.jl">Generalized Minkowski projection and decompositions of a geological model</a></li>
-<li>[Seismic full-waveform inversion with generalized Minkowski constraints (coming soon)]</li>
-</ul>
 <p>.</p>
 <div class="references">
 

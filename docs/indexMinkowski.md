@@ -10,6 +10,7 @@ classoption:
 ---
 
 ##[Preprint paper available online soon]
+##[Code on github merged with SetIntersectionProjection](https://github.com/slimgroup/SetIntersectionProjection.jl)
 
 This is the documentation main page corresponding to the **Julia 1.1** software developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (``m \in \mathbb{R}^N``) onto a generalization of the Minkowski set:
 
@@ -42,7 +43,12 @@ The generalized Minkowski set, algorithms, and software are designed
 	\end{cases}.
 	```
 
+## Applications
 
+ - [Generalized Minkowski decomposition of a video](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/Minkowski_video_decomposition.jl)
+ - [Generalized Minkowski projection and decompositions of a geological model](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/example_2D_Minkowski_projection.jl)
+ - [Seismic full-waveform inversion with generalized Minkowski constraints (coming soon)]
+ 
 ## Computational features
 
 - this package is based on the [SetIntersecionProjection](https://petersbas.github.io/SetIntersectionProjectionDocs/) package that was designed to compute projections onto intersections of sets. Not all SetIntersecionProjection features are available for generalized Minkowski sets at the moment.
@@ -83,12 +89,6 @@ The generalized Minkowski set, algorithms, and software are designed
 | wavelet transform | | "wavelet" |
 
 : Overview of the linear operators that we currently set up. Software can work with any linear operator as long it is one of the types `SparseMatrixCSC` or `JOLI` operator. Possible conversion to CDS format happens in the software. Operator math is shown for the 2D case. Curvelets require the separate installation of the [CurveLab](http://curvelet.org/software.html) software.
-
-## Applications
-
- - [Generalized Minkowski decomposition of a video](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/Minkowski_video_decomposition.jl)
- - [Generalized Minkowski projection and decompositions of a geological model](https://github.com/slimgroup/SetIntersectionProjection.jl/blob/master/examples/GeneralizedMinkowski/example_2D_Minkowski_projection.jl)
- - [Seismic full-waveform inversion with generalized Minkowski constraints (coming soon)]
 
 .
 
