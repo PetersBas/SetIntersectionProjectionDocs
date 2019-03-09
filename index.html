@@ -66,6 +66,7 @@ code > span.er { color: #ff0000; font-weight: bold; }
 </div>
 </header>
 <h2 id="preprint-paper"><a href="https://arxiv.org/abs/1902.09699">Preprint paper</a></h2>
+<h2 id="code-on-github"><a href="https://github.com/slimgroup/SetIntersectionProjection.jl">Code on github</a></h2>
 <p><strong>SetIntersectionProjection</strong> is a <strong>Julia</strong> package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (<span class="math scholmd-math-inline">\(m \in \mathbb{R}^N\)</span>) onto intersections of <span class="math scholmd-math-inline">\(p\)</span> convex and non-convex sets: 
 <span class="math scholmd-math-display" style="display: block;">\[
 \begin{equation*}
@@ -83,8 +84,8 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <p><strong>SetIntersectionProjection</strong> is designed</p>
 <ul>
 <li>for applications in imaging inverse problems.</li>
-<li>as the projector onto an intersection of constraint sets, as a plug-in for other algorithms that solve <span class="math scholmd-math-inline">\(\min_{m} f(m) \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i\)</span>, e.g., a (spectral) projected gradient / projected quasi-Newton / projected-Newton method.</li>
-<li>as a solver for linear inverse problem with forward operator <span class="math scholmd-math-inline">\(F \in \mathbb{R}^{M \times N}\)</span>, data constraints such as <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \bl[j] \leq (Fx - d_\text{observed})[j] \leq \bu[j] \}\)</span> or <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}\)</span> where index <span class="math scholmd-math-inline">\([j]\)</span> indicates a vector entry, and model property constraints formulated as 
+<li>as a plug-in projector for other algorithms that solve <span class="math scholmd-math-inline">\(\min_{m} f(m) \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i\)</span>, e.g., a (spectral) projected gradient / projected quasi-Newton / projected-Newton method.</li>
+<li>as a solver for linear inverse problem with forward operator <span class="math scholmd-math-inline">\(F \in \mathbb{R}^{M \times N}\)</span>, data constraints such as <span class="math scholmd-math-inline">\(\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}\)</span>, and model property constraints formulated as 
 <span class="math scholmd-math-display" style="display: block;">\[
 \begin{equation*}
 \min_{x,y_i} \frac{1}{2}\| x - m \|_2^2 + \sum_{i=1}^{p} \iota_{\mathcal{C}_i}(y_i) + \iota_{\mathcal{C}_{p+1}^\text{data}}(y_{p+1})\quad \text{s.t.} \quad \begin{cases}
@@ -94,13 +95,14 @@ A_i x = y_i \\ Fx=y_{p+1}
 \]</span>
 </li>
 </ul>
+<p><strong>SetIntersectionProjection</strong> also forms the basis for, and now includes, software to compute projections onto generalized Minkowski sets <a href="docs/indexMinkowski.html">documentation</a>.</p>
 <h2 id="computational-features">Computational features</h2>
 <ul>
 <li>parametric typing for Float32 and Float64 support</li>
 <li>designed for model sizes from <span class="math scholmd-math-inline">\(\approx 50^2\)</span> to at least <span class="math scholmd-math-inline">\(400^3\)</span></li>
 <li>includes scripts to set up projectors and linear operators For 2D and 3D models</li>
 <li>constraints may be defined for the matrix/tensor model and for columns/slices/fibers simultaneously</li>
-<li>works in serial or parallel with <span class="math scholmd-math-inline">\(1\)</span> Julia worker per constraint</li>
+<li>works in serial or parallel with 1 Julia worker per constraint</li>
 <li>some constraints also use Julia Threads to compute sub-problems in parallel on each worker</li>
 <li>serial part of code also uses multithreading and mulithreaded BLAS &amp; FFTW operations</li>
 <li>a build-in multilevel continuations drastically reduces computational times for many problems</li>

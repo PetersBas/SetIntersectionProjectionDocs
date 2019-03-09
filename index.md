@@ -10,6 +10,7 @@ classoption:
 ---
 
 ##[Preprint paper](https://arxiv.org/abs/1902.09699)
+##[Code on github](https://github.com/slimgroup/SetIntersectionProjection.jl)
 
 **SetIntersectionProjection** is a **Julia** package developed by Bas Peters and Felix J. Herrmann that computes projections of vectorized 2D and 3D images/models (``m \in \mathbb{R}^N``) onto intersections of ``p`` convex and non-convex sets:
 
@@ -29,13 +30,15 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
  **SetIntersectionProjection** is designed
  
 - for applications in imaging inverse problems.
-- as the projector onto an intersection of constraint sets, as a plug-in for other algorithms that solve ``\min_{m} f(m)  \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i``, e.g., a (spectral) projected gradient / projected quasi-Newton / projected-Newton method. 
-- as a solver for linear inverse problem with forward operator ``F \in \mathbb{R}^{M \times N}``, data constraints such as ``\mathcal{C}^\text{data} = \{ x \: | \: \bl[j] \leq (Fx - d_\text{observed})[j] \leq \bu[j] \}`` or ``\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}`` where index ``[j]`` indicates a vector entry, and model property constraints formulated as
+- as a plug-in projector for other algorithms that solve ``\min_{m} f(m)  \:\: \text{subject to} \:\: m \in \bigcap_{i=1}^p \mathcal{V}_i``, e.g., a (spectral) projected gradient / projected quasi-Newton / projected-Newton method. 
+- as a solver for linear inverse problem with forward operator ``F \in \mathbb{R}^{M \times N}``, data constraints such as ``\mathcal{C}^\text{data} = \{ x \: | \: \| Fx - d_\text{observed} \|_2 \leq \sigma \}``, and model property constraints formulated as
 	```math
 	\min_{x,y_i} \frac{1}{2}\| x - m \|_2^2 + \sum_{i=1}^{p} \iota_{\mathcal{C}_i}(y_i) + \iota_{\mathcal{C}_{p+1}^\text{data}}(y_{p+1})\quad \text{s.t.} \quad \begin{cases}
 	A_i x = y_i \\ Fx=y_{p+1}
 	\end{cases}.
 	```
+	
+**SetIntersectionProjection** also forms the basis for, and now includes, software to compute projections onto generalized Minkowski sets [documentation](docs/indexMinkowski.html).
 
 
 ## Computational features
@@ -44,7 +47,7 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
 - designed for model sizes from ``\approx 50^2`` to at least  ``400^3``
 - includes scripts to set up projectors and linear operators For 2D and 3D models
 - constraints may be defined for the matrix/tensor model and for columns/slices/fibers simultaneously
-- works in serial or parallel with $1$ Julia worker per constraint
+- works in serial or parallel with 1 Julia worker per constraint
 - some constraints also use Julia Threads to compute sub-problems in parallel on each worker
 - serial part of code also uses multithreading and mulithreaded BLAS & FFTW operations
 - a build-in multilevel continuations drastically reduces computational times for many problems
