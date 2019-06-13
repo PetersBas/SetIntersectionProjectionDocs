@@ -38,7 +38,7 @@ The inputs for the algorithm are pairs of projectors onto ``\mathcal{C}_i`` and 
 	\end{cases}.
 	```
 	
-**SetIntersectionProjection** also forms the basis for, and now includes, software to compute projections onto generalized Minkowski sets [documentation](docs/indexMinkowski.html).
+**SetIntersectionProjection** also forms the basis for, and now includes, software to compute projections onto generalized Minkowski sets [documentation](https://petersbas.github.io/GeneralizedMinkowskiSetDocs/).
 
 
 ## Computational features
